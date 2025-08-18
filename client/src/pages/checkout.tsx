@@ -67,16 +67,16 @@ export default function Checkout() {
         productName: item.product.name,
       }));
 
-      const subtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
-      const deliveryFee = 49;
-      const tax = Math.round(subtotal * 0.08); // 8% tax
-      const totalAmount = subtotal + deliveryFee + tax;
+      const total = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
+      // const deliveryFee = 49;
+      // const tax = Math.round(subtotal * 0.08); // 8% tax
+      // const totalAmount = subtotal + deliveryFee + tax;
 
       const orderData = {
         ...data,
-        totalAmount: totalAmount.toString(),
-        deliveryFee: deliveryFee.toString(),
-        tax: tax.toString(),
+        totalAmount: total.toString(),
+        deliveryFee:"0", //deliveryFee.toString(),
+        tax: "0",//tax.toString(),
         items: orderItems,
       };
 
@@ -117,10 +117,10 @@ export default function Checkout() {
     }
   }, [cartItems, isLoading, setLocation]);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
-  const deliveryFee = 49;
-  const tax = Math.round(subtotal * 0.08); // 8% tax
-  const total = subtotal + deliveryFee + tax;
+  const total = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
+  // const deliveryFee = 49;
+  // const tax = Math.round(subtotal * 0.08); // 8% tax
+  // const total = subtotal + deliveryFee + tax;
 
   const onSubmit = (data: CheckoutForm) => {
     if (data.paymentMethod === "upi") {
@@ -187,7 +187,7 @@ export default function Checkout() {
                         <FormItem>
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your full name" data-testid="input-name" {...field} />
+                            <Input className="border border-slate-200" placeholder="Enter your full name" data-testid="input-name" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -201,7 +201,7 @@ export default function Checkout() {
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter your phone number" data-testid="input-phone" {...field} />
+                            <Input className="border border-slate-200" placeholder="Enter your phone number" data-testid="input-phone" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -215,7 +215,7 @@ export default function Checkout() {
                         <FormItem>
                           <FormLabel>Delivery Address</FormLabel>
                           <FormControl>
-                            <Textarea 
+                            <Textarea className="border border-slate-200"
                               placeholder="Enter your complete delivery address" 
                               rows={3}
                               data-testid="input-address"
@@ -269,7 +269,7 @@ export default function Checkout() {
 
                     <Button 
                       type="submit" 
-                      className="w-full primary-button"
+                      className="w-full"
                       disabled={createOrderMutation.isPending}
                       data-testid="button-place-order"
                     >
@@ -304,19 +304,19 @@ export default function Checkout() {
 
                 {/* Price Breakdown */}
                 <div className="space-y-2">
-                  <div className="flex justify-between" data-testid="order-subtotal">
+                  {/* <div className="flex justify-between" data-testid="order-subtotal">
                     <span>Subtotal</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between" data-testid="order-delivery-fee">
+                    <span>₹{total.toFixed(2)}</span>
+                  </div> */}
+                  {/* <div className="flex justify-between" data-testid="order-delivery-fee">
                     <span>Delivery Fee</span>
                     <span>₹{deliveryFee}</span>
-                  </div>
-                  <div className="flex justify-between" data-testid="order-tax">
+                  </div> */}
+                  {/* <div className="flex justify-between" data-testid="order-tax">
                     <span>Tax (8%)</span>
                     <span>₹{tax}</span>
-                  </div>
-                  <Separator />
+                  </div> */}
+                  {/* <Separator /> */}
                   <div className="flex justify-between text-lg font-bold" data-testid="order-total">
                     <span>Total</span>
                     <span className="text-primary">₹{total.toFixed(2)}</span>

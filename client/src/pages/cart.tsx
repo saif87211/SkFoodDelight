@@ -109,9 +109,9 @@ export default function Cart() {
     },
   });
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
-  const deliveryFee = subtotal > 0 ? 49 : 0;
-  const total = subtotal + deliveryFee;
+  const total = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
+  // const deliveryFee = subtotal > 0 ? 49 : 0;
+  // const total = subtotal + deliveryFee;
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -247,12 +247,12 @@ export default function Cart() {
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between" data-testid="order-subtotal">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                      <span className="font-medium">₹{total.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between" data-testid="order-delivery-fee">
+                    {/* <div className="flex justify-between" data-testid="order-delivery-fee">
                       <span className="text-gray-600">Delivery Fee</span>
                       <span className="font-medium">₹{deliveryFee}</span>
-                    </div>
+                    </div> */}
                     <Separator />
                     <div className="flex justify-between text-lg font-bold" data-testid="order-total">
                       <span>Total</span>
@@ -261,7 +261,7 @@ export default function Cart() {
                   </div>
 
                   <Link href="/checkout">
-                    <Button className="w-full primary-button" data-testid="button-proceed-checkout">
+                    <Button className="w-full" variant={"default"} data-testid="button-proceed-checkout">
                       Proceed to Checkout
                     </Button>
                   </Link>

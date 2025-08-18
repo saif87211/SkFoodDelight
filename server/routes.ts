@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { JWTAuth } from "./auth/jwt-auth";
-import { 
-  insertProductSchema, 
-  insertCategorySchema, 
+import {
+  insertProductSchema,
+  insertCategorySchema,
   insertCartItemSchema,
   insertOrderSchema,
   insertOrderItemSchema,
@@ -21,10 +21,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { user, token } = await JWTAuth.register(
         userData.email,
         userData.password,
-        userData.firstName,
-        userData.lastName
+        userData.firstName!,
+        userData.lastName!
       );
-      
+
       const userResponse = {
         id: user.id,
         email: user.email,
@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
       };
-      
+
       res.status(201).json({ user: userResponse, token });
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const credentials = loginSchema.parse(req.body);
       const { user, token } = await JWTAuth.login(credentials.email, credentials.password);
-      
+
       const userResponse = {
         id: user.id,
         email: user.email,
@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
       };
-      
+
       res.json({ user: userResponse, token });
     } catch (error: any) {
       console.error("Login error:", error);
@@ -60,13 +60,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/auth/logout', JWTAuth.authenticateToken, async (req, res) => {
+    res.removeHeader("authorization")
+    res.removeHeader("set-cookie");
+    return res.status(200).json({ message: "User logout successfully" });
+  })
+
   app.get('/api/auth/user', JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const userResponse = {
         id: user.id,
         email: user.email,
@@ -74,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: user.lastName,
         profileImageUrl: user.profileImageUrl,
       };
-      
+
       res.json(userResponse);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -108,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/products', async (req, res) => {
     try {
       const { category } = req.query;
-      const products = category 
+      const products = category
         ? await storage.getProductsByCategory(category as string)
         : await storage.getProducts();
       res.json(products);
@@ -205,19 +211,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderSchema = insertOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true }))
       });
-      
+
       const { items, ...orderData } = orderSchema.parse({ ...req.body, userId });
-      
+
       // Simulate payment processing delay
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // For MVP, assume payment is successful
       const finalOrderData = {
         ...orderData,
         paymentStatus: 'paid',
         estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000) // 45 minutes from now
       };
-      
+
       const order = await storage.createOrder(finalOrderData, items);
       res.json(order);
     } catch (error) {
@@ -257,22 +263,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: z.string(),
         paymentMethod: z.string()
       }).parse(req.body);
-      
+
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Random success/failure for demo (90% success rate)
       const isSuccess = Math.random() > 0.1;
-      
+
       if (isSuccess) {
-        res.json({ 
-          success: true, 
+        res.json({
+          success: true,
           transactionId: `TXN${Date.now()}`,
           message: "Payment successful"
         });
       } else {
-        res.status(400).json({ 
-          success: false, 
+        res.status(400).json({
+          success: false,
           message: "Payment failed. Please try again."
         });
       }

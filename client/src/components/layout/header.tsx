@@ -18,11 +18,30 @@ interface HeaderProps {
 
 export default function Header({ onCartToggle }: HeaderProps) {
   const { user } = useAuth();
-  
+
   const { data: cartItems = [] } = useQuery<(CartItem & { product: Product })[]>({
     queryKey: ["/api/cart"],
   });
 
+  const onLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const response = await fetch('/api/auth/logout', { method: "POST", headers });
+      if (response.ok) {
+        localStorage.clear();
+        console.log("Logout");
+        window.location.replace("/");
+        window.history.forward();
+      }
+    } catch (error) {
+      alert("Logout failed");
+    }
+  }
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -35,7 +54,7 @@ export default function Header({ onCartToggle }: HeaderProps) {
               FoodieHub
             </div>
           </Link>
-          
+
           <nav className="hidden md:flex space-x-8">
             <Link href="/" className="text-dark hover:text-primary font-medium transition-colors" data-testid="link-nav-home">
               Home
@@ -44,7 +63,7 @@ export default function Header({ onCartToggle }: HeaderProps) {
               Orders
             </Link>
           </nav>
-          
+
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Button
@@ -56,7 +75,7 @@ export default function Header({ onCartToggle }: HeaderProps) {
               >
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemCount > 0 && (
-                  <Badge 
+                  <Badge
                     className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary"
                     data-testid="badge-cart-count"
                   >
@@ -70,9 +89,9 @@ export default function Header({ onCartToggle }: HeaderProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" data-testid="button-user-menu">
                   {user?.profileImageUrl ? (
-                    <img 
-                      src={user.profileImageUrl} 
-                      alt="Profile" 
+                    <img
+                      src={user.profileImageUrl}
+                      alt="Profile"
                       className="h-6 w-6 rounded-full object-cover"
                     />
                   ) : (
@@ -88,7 +107,7 @@ export default function Header({ onCartToggle }: HeaderProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <a href="/api/logout" className="flex items-center" data-testid="link-logout">
+                  <a onClick={onLogout} className="flex items-center" data-testid="link-logout">
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
                   </a>

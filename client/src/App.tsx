@@ -30,7 +30,7 @@ function Router() {
           <Route path="/orders" component={Orders} />
         </>
       )}
-      <Route component={NotFound} />
+      {/* <Route path="/" component={AuthPage} /> */}
     </Switch>
   );
 }

@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { Jwt } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
@@ -17,7 +17,7 @@ export class JWTAuth {
   static generateToken(payload: { userId: string; email: string }): string {
     return jwt.sign(payload, this.JWT_SECRET, {
       expiresIn: this.JWT_EXPIRES_IN,
-    });
+    } as jwt.SignOptions);
   }
 
   static verifyToken(token: string): JWTPayload | null {

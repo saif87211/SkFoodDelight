@@ -113,7 +113,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <Button
             onClick={handleAddToCart}
             disabled={!product.isAvailable || isAdding}
-            className="w-full primary-button"
+            className="w-full"
             data-testid={`button-add-to-cart-${product.id}`}
           >
             <Plus className="mr-1 h-4 w-4" />

@@ -124,7 +124,7 @@ export default function PaymentModal({ amount, onSuccess, onCancel }: PaymentMod
             <Button
               onClick={handlePayment}
               disabled={paymentMutation.isPending || !upiId.trim()}
-              className="w-full primary-button"
+              className="w-full"
               data-testid="button-pay-now"
             >
               {paymentMutation.isPending ? (

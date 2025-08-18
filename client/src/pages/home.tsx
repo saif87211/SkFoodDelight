@@ -17,9 +17,8 @@ export default function Home() {
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
-
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: selectedCategory === "all" ? ["/api/products"] : ["/api/products", { category: selectedCategory }],
+    queryKey: selectedCategory === "all" ? ["/api/products"] : ["/api/products", `?category=${selectedCategory}`],
   });
 
   const filteredProducts = products.filter(product =>
@@ -36,7 +35,7 @@ export default function Home() {
         <section className="relative rounded-2xl overflow-hidden mb-12 h-64 md:h-80">
           <div className="absolute inset-0 hero-gradient z-10"></div>
           <img 
-            src="https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=400" 
+            src="https://media.istockphoto.com/id/1324465031/photo/high-angle-view-close-up-asian-woman-using-meal-delivery-service-ordering-food-online-with.jpg?s=612x612&w=0&k=20&c=fvBRmqFb-nYK46nrfC9091HH72a4anMzWoojG7WyDMk=" 
             alt="Delicious food spread" 
             className="w-full h-full object-cover"
           />
@@ -64,7 +63,7 @@ export default function Home() {
           <div className="flex overflow-x-auto space-x-4 pb-4">
             <Button
               variant={selectedCategory === "all" ? "default" : "outline"}
-              className={`flex-shrink-0 category-pill ${selectedCategory === "all" ? "primary-button" : ""}`}
+              className={`flex-shrink-0 category-pill`}
               onClick={() => setSelectedCategory("all")}
               data-testid="button-category-all"
             >
@@ -74,7 +73,7 @@ export default function Home() {
               <Button
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
-                className={`flex-shrink-0 category-pill ${selectedCategory === category.id ? "primary-button" : ""}`}
+                className={`flex-shrink-0 category-pill`}
                 onClick={() => setSelectedCategory(category.id)}
                 data-testid={`button-category-${category.slug}`}
               >
@@ -92,7 +91,7 @@ export default function Home() {
               placeholder="Search for food..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12"
+              className="pl-12 border border-slate-300"
               data-testid="input-search"
             />
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />

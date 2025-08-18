@@ -262,7 +262,7 @@ export default function AuthPage() {
       </div>
 
       {/* Right side - Hero section */}
-      <div className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 p-8 text-white flex flex-col justify-center">
+      <div className="hidden flex-1 bg-gradient-to-br from-orange-500 to-red-600 p-8 text-white sm:flex flex-col justify-center">
         <div className="max-w-lg">
           <h2 className="text-4xl font-bold mb-6">
             Delicious food delivered to your doorstep

@@ -138,7 +138,7 @@ export default function Orders() {
                         Order #{order.id.slice(-8).toUpperCase()}
                       </CardTitle>
                       <p className="text-gray-600 text-sm" data-testid={`order-date-${order.id}`}>
-                        Placed on {formatDate(order.createdAt!)}
+                        Placed on {formatDate(order.createdAt?.toString()!)}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">

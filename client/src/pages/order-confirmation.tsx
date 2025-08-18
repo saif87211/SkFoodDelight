@@ -254,7 +254,7 @@ export default function OrderConfirmation() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>₹{(parseFloat(order.totalAmount) - parseFloat(order.deliveryFee) - parseFloat(order.tax || "0")).toFixed(2)}</span>
+                    <span>₹{(parseFloat(order.totalAmount) - parseFloat(order.deliveryFee!) - parseFloat(order.tax || "0")).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery Fee</span>

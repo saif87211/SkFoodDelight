@@ -81,9 +81,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     },
   });
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
-  const deliveryFee = subtotal > 0 ? 49 : 0;
-  const total = subtotal + deliveryFee;
+  const total = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
+  // const deliveryFee = subtotal > 0 ? 49 : 0;
+  // const total = subtotal + deliveryFee;
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -194,12 +194,12 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-gray-600" data-testid="cart-subtotal">
                   <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-gray-600" data-testid="cart-delivery-fee">
+                {/* <div className="flex justify-between text-gray-600" data-testid="cart-delivery-fee">
                   <span>Delivery Fee</span>
                   <span>₹{deliveryFee}</span>
-                </div>
+                </div> */}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold text-dark" data-testid="cart-total">
                   <span>Total</span>
@@ -208,7 +208,8 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               </div>
               <Link href="/checkout">
                 <Button 
-                  className="w-full primary-button" 
+                  className="w-full" 
+                  variant={"default"}
                   onClick={onClose}
                   data-testid="button-proceed-checkout"
                 >
