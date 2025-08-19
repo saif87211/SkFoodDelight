@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, CreditCard, Smartphone, Banknote } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
@@ -88,6 +88,7 @@ export default function Checkout() {
         title: "Order placed successfully!",
         description: `Your order #${order.id.slice(-8)} has been confirmed`,
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       setLocation(`/order-confirmation/${order.id}`);
     },
     onError: (error) => {

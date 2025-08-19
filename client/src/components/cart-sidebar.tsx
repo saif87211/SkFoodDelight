@@ -192,15 +192,15 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
           {cartItems.length > 0 && (
             <div className="p-6 border-t bg-gray-50">
               <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-gray-600" data-testid="cart-subtotal">
+                {/* <div className="flex justify-between text-gray-600" data-testid="cart-subtotal">
                   <span>Subtotal</span>
                   <span>₹{total.toFixed(2)}</span>
-                </div>
+                </div> */}
                 {/* <div className="flex justify-between text-gray-600" data-testid="cart-delivery-fee">
                   <span>Delivery Fee</span>
                   <span>₹{deliveryFee}</span>
                 </div> */}
-                <Separator />
+                {/* <Separator /> */}
                 <div className="flex justify-between text-lg font-bold text-dark" data-testid="cart-total">
                   <span>Total</span>
                   <span>₹{total.toFixed(2)}</span>
