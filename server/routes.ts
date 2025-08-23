@@ -11,7 +11,20 @@ import {
   registerSchema,
   loginSchema
 } from "@shared/schema";
+import Razorpay from "razorpay";
 import { z } from "zod";
+import crypto from "crypto";
+
+function configRazorPay() {
+  const key_id = process.env.RAZORPAY_KEY_ID!;
+
+  const razorpay = new Razorpay({
+    key_id,
+    key_secret: process.env.RAZORPAY_SECRET!,
+  })
+
+  return { razorpay, key_id } as const;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -208,23 +221,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/orders', JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
+
+      const razorpay_payment_id = z.string().parse(req.body.paymentId);
+
+      const { razorpay } = configRazorPay();
+
+      const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+
+      console.log("Payment details:", paymentDetails);
+
       const orderSchema = insertOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true }))
+
+      });
+      const { items, ...orderData } = orderSchema.parse({
+        ...req.body,
+        userId,
+        paymentMethod: paymentDetails.method,
+        paymentStatus: paymentDetails.status,
+        paymentId: paymentDetails.id,
+        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000) // 45 minutes from now
       });
 
-      const { items, ...orderData } = orderSchema.parse({ ...req.body, userId });
-
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // For MVP, assume payment is successful
-      const finalOrderData = {
-        ...orderData,
-        paymentStatus: 'paid',
-        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000) // 45 minutes from now
-      };
-
-      const order = await storage.createOrder(finalOrderData, items);
+      const order = await storage.createOrder(orderData, items);
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -256,35 +275,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Payment simulation endpoint
-  app.post('/api/payment/simulate', JWTAuth.authenticateToken, async (req, res) => {
+
+  // Payment endpoint
+  app.post('/api/payment', JWTAuth.authenticateToken, async (req: any, res) => {
     try {
-      const { amount, paymentMethod } = z.object({
-        amount: z.string(),
-        paymentMethod: z.string()
-      }).parse(req.body);
+      const amount = z.string().parse(req.body.totalAmount);
+      const { razorpay, key_id } = configRazorPay();
 
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const order = await razorpay.orders.create({
+        amount: parseFloat(amount) * 100,
+        currency: "INR",
+      });
 
-      // Random success/failure for demo (90% success rate)
-      const isSuccess = Math.random() > 0.1;
+      return res.status(200).json({ success: true, order, token: key_id });
 
-      if (isSuccess) {
-        res.json({
-          success: true,
-          transactionId: `TXN${Date.now()}`,
-          message: "Payment successful"
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: "Payment failed. Please try again."
-        });
-      }
     } catch (error) {
       console.error("Error processing payment:", error);
-      res.status(500).json({ message: "Payment processing failed" });
+      return res.status(500).json({ message: "Payment processing failed" });
+    }
+  });
+
+  app.post("/api/payment/verify-payment", JWTAuth.authenticateToken, async (req, res) => {
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_APT_SECRET!)
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature === razorpay_signature) {
+        return res.status(200).json({ success: true, message: 'Payment verified successfully.' });
+      }
+
+      return res.status(400).json({ success: false, message: 'Invalid signature.' });
+    } catch (error) {
+      console.error("Error in verification of payment:", error);
+      return res.status(400).json({ success: false, message: 'Invalid signature.' });
     }
   });
 

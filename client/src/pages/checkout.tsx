@@ -18,8 +18,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
-import PaymentModal from "@/components/payment-modal";
 import { type CartItem, type Product } from "@shared/schema";
+import { useRazorpay, RazorpayOrderOptions } from "react-razorpay";
 import {
   Form,
   FormControl,
@@ -33,14 +33,22 @@ const checkoutSchema = z.object({
   customerName: z.string().min(2, "Name must be at least 2 characters"),
   customerPhone: z.string().min(10, "Phone number must be at least 10 digits"),
   deliveryAddress: z.string().min(10, "Address must be at least 10 characters"),
-  paymentMethod: z.enum(["upi", "card", "cod"]),
+  //paymentMethod: z.enum(["upi", "card", "cod"]),
 });
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // const [showPaymentModal, setShowPaymentModal] = useState(true);
+  const { Razorpay } = useRazorpay();
+
   const [orderData, setOrderData] = useState<any>(null);
   const { toast } = useToast();
 
@@ -54,42 +62,97 @@ export default function Checkout() {
       customerName: "",
       customerPhone: "",
       deliveryAddress: "",
-      paymentMethod: "upi",
+      // paymentMethod: "upi",
     },
   });
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: CheckoutForm) => {
-      const orderItems = cartItems.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.product.price,
-        productName: item.product.name,
-      }));
+      try {
+        const orderItems = cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.product.price,
+          productName: item.product.name,
+        }));
 
-      const total = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
-      // const deliveryFee = 49;
-      // const tax = Math.round(subtotal * 0.08); // 8% tax
-      // const totalAmount = subtotal + deliveryFee + tax;
+        const total = cartItems.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
+        // const deliveryFee = 49;
+        // const tax = Math.round(subtotal * 0.08); // 8% tax
+        // const totalAmount = subtotal + deliveryFee + tax;
 
-      const orderData = {
-        ...data,
-        totalAmount: total.toString(),
-        deliveryFee:"0", //deliveryFee.toString(),
-        tax: "0",//tax.toString(),
-        items: orderItems,
+        const newOrderData = {
+          ...data,
+          totalAmount: total.toFixed(2).toString(),
+          deliveryFee: "0", //deliveryFee.toString(),
+          tax: "0",//tax.toString(),
+          items: orderItems,
+        };
+        setOrderData(newOrderData);
+        const response = await apiRequest("POST", "/api/payment", newOrderData);
+        return response.json();
+
+      } catch (error) {
+        console.error("Error in createOrderMutation:", error);
+        throw error;
+      }
+    },
+    onSuccess: (data) => {
+      const handlePaymentSuccess = async (response: any) => {
+        console.log("Payment response:", response);
+        if (!response.razorpay_payment_id) {
+          toast({
+            title: "Payment Failed",
+            description: "Payment was not successful. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "Payment Successful!",
+          description: `Transaction ID: ${response.razorpay_payment_id}`,
+        });
+
+        try {
+          console.log("Recording order with data in handlePayment Success:", {
+            paymentId: response.razorpay_payment_id,
+            ...orderData
+          });
+          const recordOrderResponse = await apiRequest("POST", "/api/orders", {
+            paymentId: response.razorpay_payment_id,
+            ...orderData
+          });
+          if (!recordOrderResponse.ok) {
+            throw new Error("Failed to record order.");
+          }
+
+          const recordOrderData = await recordOrderResponse.json();
+
+          queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+          setLocation(`/order-confirmation/${recordOrderData.id}`);
+        } catch (error) {
+          console.error("Error recording order:", error);
+          toast({
+            title: "Error",
+            description: "Failed to record order. Please contact support.",
+            variant: "destructive",
+          });
+        }
       };
 
-      const response = await apiRequest("POST", "/api/orders", orderData);
-      return response.json();
-    },
-    onSuccess: (order) => {
-      toast({
-        title: "Order placed successfully!",
-        description: `Your order #${order.id.slice(-8)} has been confirmed`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      setLocation(`/order-confirmation/${order.id}`);
+      const options: RazorpayOrderOptions = {
+        key: data.token,
+        amount: data.order.amount,
+        currency: "INR",
+        name: "SkFoodDelight",
+        order_id: data.order.id,
+        callback_url: "/api/payment/verify-payment",
+        handler: handlePaymentSuccess,
+      };
+
+      const razorpayInstance = new Razorpay(options);
+      razorpayInstance.open();
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -124,26 +187,27 @@ export default function Checkout() {
   // const total = subtotal + deliveryFee + tax;
 
   const onSubmit = (data: CheckoutForm) => {
-    if (data.paymentMethod === "upi") {
-      setOrderData(data);
-      setShowPaymentModal(true);
-    } else {
-      createOrderMutation.mutate(data);
-    }
+    createOrderMutation.mutate(data);
+    // if (data.paymentMethod === "upi") {
+    //   setOrderData(data);
+    //   setShowPaymentModal(true);
+    // } else {
+    //   createOrderMutation.mutate(data);
+    // }
   };
 
-  const handlePaymentSuccess = () => {
-    setShowPaymentModal(false);
-    if (orderData) {
-      createOrderMutation.mutate(orderData);
-    }
-  };
+  // const handlePaymentSuccess = () => {
+  //   // setShowPaymentModal(false);
+  //   if (orderData) {
+  //     createOrderMutation.mutate(orderData);
+  //   }
+  // };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-light">
-        <Header onCartToggle={() => {}} />
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <Header onCartToggle={() => { }} />
+        <div className="max-w-4xl mx-auto px-4 py-5">
           <div className="text-center" data-testid="checkout-loading">
             <p className="text-gray-500">Loading checkout...</p>
           </div>
@@ -155,20 +219,20 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-light">
-      <Header onCartToggle={() => {}} />
+      <Header onCartToggle={() => { }} />
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-5">
         {/* Header */}
-        <div className="flex items-center space-x-4 mb-8">
+        <h1 className="text-3xl font-bold text-center text-dark" data-testid="text-checkout-title">
+          Checkout
+        </h1>
+        <div className="flex items-center space-x-4 my-5">
           <Link href="/cart">
             <Button variant="ghost" data-testid="button-back">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Cart
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-dark" data-testid="text-checkout-title">
-            Checkout
-          </h1>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -217,10 +281,10 @@ export default function Checkout() {
                           <FormLabel>Delivery Address</FormLabel>
                           <FormControl>
                             <Textarea className="border border-slate-200"
-                              placeholder="Enter your complete delivery address" 
+                              placeholder="Enter your complete delivery address"
                               rows={3}
                               data-testid="input-address"
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -228,7 +292,7 @@ export default function Checkout() {
                       )}
                     />
 
-                    <FormField
+                    {/*<FormField
                       control={form.control}
                       name="paymentMethod"
                       render={({ field }) => (
@@ -266,10 +330,10 @@ export default function Checkout() {
                           <FormMessage />
                         </FormItem>
                       )}
-                    />
+                    />*/}
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full"
                       disabled={createOrderMutation.isPending}
                       data-testid="button-place-order"
@@ -331,13 +395,13 @@ export default function Checkout() {
 
       <Footer />
 
-      {showPaymentModal && (
+      {/*showPaymentModal && (
         <PaymentModal
           amount={total}
           onSuccess={handlePaymentSuccess}
           onCancel={() => setShowPaymentModal(false)}
         />
-      )}
+      )*/}
     </div>
   );
 }

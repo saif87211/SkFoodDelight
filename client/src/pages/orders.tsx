@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +14,14 @@ import { type Order, type OrderItem, type Product } from "@shared/schema";
 
 export default function Orders() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading, error } = useQuery<(Order & { orderItems: (OrderItem & { product: Product })[] })[]>({
     queryKey: ["/api/orders"],
-    retry: false,
+    refetchOnMount: "always"
   });
+
+  //queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
 
   // Handle unauthorized errors at page level
   useEffect(() => {
@@ -74,7 +77,7 @@ export default function Orders() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-light">
-        <Header onCartToggle={() => {}} />
+        <Header onCartToggle={() => { }} />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="text-center" data-testid="orders-loading">
             <p className="text-gray-500 text-lg">Loading your orders...</p>
@@ -87,7 +90,7 @@ export default function Orders() {
 
   return (
     <div className="min-h-screen bg-light">
-      <Header onCartToggle={() => {}} />
+      <Header onCartToggle={() => { }} />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
@@ -108,8 +111,8 @@ export default function Orders() {
             <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-500 mb-2">Failed to Load Orders</h2>
             <p className="text-gray-400 mb-6">There was an error loading your orders. Please try again.</p>
-            <Button 
-              onClick={() => window.location.reload()} 
+            <Button
+              onClick={() => window.location.reload()}
               className="primary-button"
               data-testid="button-retry"
             >
@@ -160,9 +163,9 @@ export default function Orders() {
                   <div className="space-y-3 mb-4">
                     {order.orderItems.slice(0, 3).map((item) => (
                       <div key={item.id} className="flex items-center space-x-4" data-testid={`order-item-${item.id}`}>
-                        <img 
-                          src={item.product.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=60&h=60"} 
-                          alt={item.productName} 
+                        <img
+                          src={item.product.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=60&h=60"}
+                          alt={item.productName}
                           className="w-12 h-12 object-cover rounded-lg"
                           data-testid={`order-item-image-${item.id}`}
                         />
@@ -181,7 +184,7 @@ export default function Orders() {
                         </div>
                       </div>
                     ))}
-                    
+
                     {order.orderItems.length > 3 && (
                       <p className="text-gray-500 text-sm" data-testid={`order-more-items-${order.id}`}>
                         +{order.orderItems.length - 3} more items
@@ -199,7 +202,7 @@ export default function Orders() {
                         {order.deliveryAddress}
                       </p>
                     </div>
-                    
+
                     <div className="text-right">
                       <p className="text-gray-600 text-sm">Total Amount</p>
                       <p className="text-2xl font-bold text-primary" data-testid={`order-total-${order.id}`}>

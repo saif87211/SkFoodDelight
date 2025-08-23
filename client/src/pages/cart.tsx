@@ -123,11 +123,14 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-light">
-      <Header onCartToggle={() => {}} />
+      <Header onCartToggle={() => { }} />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-dark text-center" data-testid="text-cart-title">
+          Your Cart
+        </h1>
+        <div className="flex items-center justify-between my-8">
           <div className="flex items-center space-x-4">
             <Link href="/">
               <Button variant="ghost" data-testid="button-back">
@@ -135,9 +138,6 @@ export default function Cart() {
                 Back to Menu
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-dark" data-testid="text-cart-title">
-              Your Cart
-            </h1>
           </div>
 
           {cartItems.length > 0 && (
@@ -176,13 +176,13 @@ export default function Cart() {
                 <Card key={item.id} data-testid={`cart-item-${item.id}`}>
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-4">
-                      <img 
-                        src={item.product.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150"} 
-                        alt={item.product.name} 
+                      <img
+                        src={item.product.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150"}
+                        alt={item.product.name}
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                         data-testid={`cart-item-image-${item.id}`}
                       />
-                      
+
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg text-dark" data-testid={`cart-item-name-${item.id}`}>
                           {item.product.name}
@@ -243,7 +243,7 @@ export default function Cart() {
                   <h3 className="text-xl font-bold text-dark mb-4" data-testid="text-order-summary">
                     Order Summary
                   </h3>
-                  
+
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between" data-testid="order-subtotal">
                       <span className="text-gray-600">Subtotal</span>

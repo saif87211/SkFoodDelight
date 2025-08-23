@@ -85,6 +85,7 @@ export const orders = pgTable("orders", {
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
   paymentMethod: varchar("payment_method").notNull(), // upi, card, cod
   paymentStatus: varchar("payment_status").notNull().default("pending"), // pending, paid, failed
+  paymentId: varchar("payment_id"), // For Razorpay or other payment gateways
   deliveryAddress: text("delivery_address").notNull(),
   customerName: varchar("customer_name").notNull(),
   customerPhone: varchar("customer_phone").notNull(),

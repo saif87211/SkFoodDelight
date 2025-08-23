@@ -13,6 +13,10 @@ import Checkout from "@/pages/checkout";
 import OrderConfirmation from "@/pages/order-confirmation";
 import Orders from "@/pages/orders";
 
+const script = document.createElement('script');
+script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+document.body.appendChild(script);
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
