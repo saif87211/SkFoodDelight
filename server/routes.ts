@@ -26,7 +26,7 @@ function configRazorPay() {
   return { razorpay, key_id } as const;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, io: any): Promise<Server> {
   // Auth routes
   app.post('/api/auth/register', async (req, res) => {
     try {
@@ -314,6 +314,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in verification of payment:", error);
       return res.status(400).json({ success: false, message: 'Invalid signature.' });
+    }
+  });
+
+  // Admin dashboard route
+  app.post("/api/admin/register", async (req, res) => {
+    try {
+      const adminData = registerSchema.parse(req.body);
+      const { admin, token } = await JWTAuth.adminRegister(
+        adminData.email,
+        adminData.password,
+        adminData.firstName!,
+        adminData.lastName!
+      );
+
+      const adminResponse = {
+        id: admin.id,
+        email: admin.email,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+      };
+
+      return res.status(201).json({ admin: adminResponse, token });
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message || "Registration failed" });
+    }
+  });
+
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const credentials = loginSchema.parse(req.body);
+      const { admin, token } = await JWTAuth.adminLogin(credentials.email, credentials.password);
+
+      const adminResponse = {
+        id: admin.id,
+        email: admin.email,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+      };
+
+      return res.json({ admin: adminResponse, token });
+    } catch (error: any) {
+      return res.status(401).json({ message: error.message || "Login failed" });
+    }
+  });
+
+  app.post("/api/admin/logout", JWTAuth.authenticateAdminToken, async (req, res) => {
+    res.removeHeader("authorization")
+    res.removeHeader("set-cookie");
+    return res.status(200).json({ message: "Admin logout successfully" });
+  });
+
+  app.get('/api/admin-dashboard', async (req: any, res) => {
+    try {
+      // const user = await storage.getUser(req.user.userId);
+      // if (!user) {
+      //   return res.status(404).json({ message: "User not found" });
+      // }
+
+      const dashboardData = {
+        totalUsers: await storage.getAllUsers(),
+        totalOrders: await storage.getOrdersWithItemsAndUsers(),
+        totalCategoriesWithPorducts: await storage.getAllCategoriesWithProducts(),
+      };
+
+      res.json(dashboardData);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard data" });
     }
   });
 

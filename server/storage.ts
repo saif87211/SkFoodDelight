@@ -17,15 +17,27 @@ import {
   type InsertOrder,
   type OrderItem,
   type InsertOrderItem,
+  type Admin,
+  admins,
+  InsertAdmin,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, getTableColumns } from "drizzle-orm";
+
+type UserWithoutPassword = Omit<User, 'password'>;
+type CategoryWithProducts = Category & { products: Product[] };
 
 export interface IStorage {
   // User operations for JWT Auth
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  //admin operations
+  getAdminByEmail(email: string): Promise<Admin | undefined>;
+  getAdmin(id: string): Promise<Admin | undefined>;
+  createAdmin(admin: InsertUser): Promise<Admin>;
+  //getOrdersWithItemsAndUsers(): Promise<(Order & { orderItems: (OrderItem & { product: Product } & { users: (User) })[] })[]>;
 
   // Category operations
   getCategories(): Promise<Category[]>;
@@ -69,6 +81,29 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getAllUsers(): Promise<UserWithoutPassword[]> {
+    const { password, ...rest } = getTableColumns(users);
+    return await db.select({ ...rest }).from(users);
+  }
+
+
+  // Admin operations
+  async createAdmin(adminData: InsertAdmin): Promise<Admin> {
+    const [admin] = await db.insert(admins).values(adminData).returning();
+    return admin;
+  }
+
+  async getAdminByEmail(email: string): Promise<Admin | undefined> {
+    const [admin] = await db.select().from(admins).where(eq(admins.email, email));
+    return admin;
+  }
+
+  async getAdmin(id: string): Promise<Admin | undefined> {
+    const [admin] = await db.select().from(admins).where(eq(admins.id, id));
+    return admin;
+  }
+
+
   // Category operations
   async getCategories(): Promise<Category[]> {
     return await db.select().from(categories).where(eq(categories.isActive, true));
@@ -77,6 +112,10 @@ export class DatabaseStorage implements IStorage {
   async createCategory(category: InsertCategory): Promise<Category> {
     const [newCategory] = await db.insert(categories).values(category).returning();
     return newCategory;
+  }
+
+  async getAllCategoriesWithProducts() {
+    return await db.select().from(categories);
   }
 
   // Product operations
@@ -138,7 +177,7 @@ export class DatabaseStorage implements IStorage {
       // Update quantity
       const [updatedItem] = await db
         .update(cartItems)
-        .set({ 
+        .set({
           quantity: existingItem.quantity + cartItem.quantity!,
           updatedAt: new Date()
         })
@@ -173,7 +212,7 @@ export class DatabaseStorage implements IStorage {
   async createOrder(order: InsertOrder, items: Omit<InsertOrderItem, 'orderId'>[]): Promise<Order> {
     return await db.transaction(async (tx) => {
       const [newOrder] = await tx.insert(orders).values(order).returning();
-      
+
       await tx.insert(orderItems).values(
         items.map(item => ({ ...item, orderId: newOrder.id }))
       );
@@ -244,6 +283,20 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedOrder;
   }
+
+  async getAllorders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersWithItemsAndUsers() {
+    return await db
+      .select()
+      .from(orders)
+      // .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
+      .leftJoin(users, eq(orders.userId, users.id))
+      .orderBy(desc(orders.createdAt));
+  }
+
 }
 
 export const storage = new DatabaseStorage();

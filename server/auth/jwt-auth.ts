@@ -4,7 +4,8 @@ import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 
 export interface JWTPayload {
-  userId: string;
+  userId?: string;
+  adminId?: string;
   email: string;
   iat?: number;
   exp?: number;
@@ -14,8 +15,8 @@ export class JWTAuth {
   private static readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
   private static readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-  static generateToken(payload: { userId: string; email: string }): string {
-    return jwt.sign(payload, this.JWT_SECRET, {
+  static generateToken(data: { adminId?: string, userId?: string, email: string }): string {
+    return jwt.sign(data, this.JWT_SECRET, {
       expiresIn: this.JWT_EXPIRES_IN,
     } as jwt.SignOptions);
   }
@@ -55,28 +56,54 @@ export class JWTAuth {
     next();
   };
 
-  static async register(email: string, password: string, firstName?: string, lastName?: string) {
-    // Check if user already exists
-    const existingUser = await storage.getUserByEmail(email);
-    if (existingUser) {
-      throw new Error('User already exists');
+  static authenticateAdminToken = async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({ message: 'Access token required' });
     }
 
-    // Hash password
-    const hashedPassword = await this.hashPassword(password);
+    const payload = JWTAuth.verifyToken(token);
+    if (!payload) {
+      return res.status(403).json({ message: 'Invalid or expired token' });
+    }
 
-    // Create user
-    const user = await storage.createUser({
-      email,
-      password: hashedPassword,
-      firstName: firstName || '',
-      lastName: lastName || '',
-    });
+    if (!payload.adminId) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    // Attach user info to request
+    (req as any).user = payload;
+    next();
+  };
 
-    // Generate token
-    const token = this.generateToken({ userId: user.id, email: user.email });
+  static async register(email: string, password: string, firstName?: string, lastName?: string) {
 
-    return { user, token };
+    try {
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        throw new Error('User already exists');
+      }
+
+      // Hash password
+      const hashedPassword = await this.hashPassword(password);
+
+      // Create user
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        firstName: firstName || '',
+        lastName: lastName || '',
+      });
+
+      // Generate token
+      const token = this.generateToken({ userId: user.id, email: user.email });
+
+      return { user, token };
+    } catch (error) {
+      throw error;
+    }
   }
 
   static async login(email: string, password: string) {
@@ -97,4 +124,56 @@ export class JWTAuth {
 
     return { user, token };
   }
+
+  static async adminRegister(email: string, password: string, firstName?: string, lastName?: string) {
+    // Check if admin already exists
+    try {
+      const existingAdmin = await storage.getAdminByEmail(email);
+      if (existingAdmin) {
+        throw new Error('Admin already exists');
+      }
+  
+      // Hash password
+      const hashedPassword = await this.hashPassword(password);
+  
+      // Create user
+      const admin = await storage.createAdmin({
+        email,
+        password: hashedPassword,
+        firstName: firstName || '',
+        lastName: lastName || '',
+      });
+  
+      console.log(admin);
+  
+      // Generate token
+      const token = this.generateToken({ adminId: admin?.id, email: admin?.email! });
+  
+      return { admin, token };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async adminLogin(email: string, password: string) {
+    const admin = await storage.getAdminByEmail(email);
+    if (!admin) {
+      throw new Error('Invalid credentials');
+    }
+    if (!admin.isActive) {
+      throw new Error('Admin account is inactive');
+    }
+
+    // Check password
+    const isValidPassword = await this.comparePassword(password, admin.password);
+    if (!isValidPassword) {
+      throw new Error('Invalid credentials');
+    }
+
+    // Generate token
+    const token = this.generateToken({ adminId: admin.id, email: admin.email });
+
+    return { admin, token };
+  }
+
 }

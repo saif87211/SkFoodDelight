@@ -38,6 +38,19 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const admins = pgTable("admin", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull().unique(),
+  password: varchar("password").notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  phone: varchar("phone"),
+  isActive: boolean("is_active").default(true),
+  role: varchar("role").notNull().default("superadmin"), // manager, staff, superadmin
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Product categories
 export const categories = pgTable("categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -184,7 +197,8 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
+export type Admin = typeof admins.$inferSelect;
+export type InsertAdmin = typeof admins.$inferInsert;
 // Auth schemas for validation
 export const registerSchema = createInsertSchema(users).pick({
   email: true,
