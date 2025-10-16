@@ -45,8 +45,8 @@ export const admins = pgTable("admin", {
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   phone: varchar("phone"),
-  isActive: boolean("is_active").default(true),
-  role: varchar("role").notNull().default("superadmin"), // manager, staff, superadmin
+  isActive: boolean("is_active").default(false),
+  role: varchar("role").notNull().default("staff"), // manager, staff, superadmin
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

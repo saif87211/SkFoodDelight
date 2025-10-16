@@ -275,7 +275,6 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-
   // Payment endpoint
   app.post('/api/payment', JWTAuth.authenticateToken, async (req: any, res) => {
     try {
@@ -365,7 +364,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     return res.status(200).json({ message: "Admin logout successfully" });
   });
 
-  app.get('/api/admin-dashboard', async (req: any, res) => {
+  app.get('/api/admin-dashboard', JWTAuth.authenticateAdminToken, async (req: any, res) => {
     try {
       // const user = await storage.getUser(req.user.userId);
       // if (!user) {
@@ -382,6 +381,25 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       res.status(500).json({ message: "Failed to fetch dashboard data" });
+    }
+  });
+
+  app.get('/api/auth/admin', JWTAuth.authenticateAdminToken, async (req: any, res) => {
+    try {
+
+      const adminResponse = {
+        id: req.admin.id,
+        email: req.admin.email,
+        firstName: req.admin.firstName,
+        lastName: req.admin.lastName,
+        profileImageUrl: req.admin.profileImageUrl,
+        isActive: req.admin.isActive,
+      };
+
+      res.json(adminResponse);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
