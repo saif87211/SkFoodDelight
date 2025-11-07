@@ -30,11 +30,6 @@ export default function AuthPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    return <Redirect to="/" />;
-  }
-
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -52,6 +47,12 @@ export default function AuthPage() {
       lastName: "",
     },
   });
+  
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    return <Redirect to="/home" />;
+  }
+
 
   const onLogin = async (data: LoginFormData) => {
     try {

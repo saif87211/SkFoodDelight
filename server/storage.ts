@@ -24,8 +24,15 @@ import {
 import { db } from "./db";
 import { eq, and, desc, getTableColumns } from "drizzle-orm";
 
-type UserWithoutPassword = Omit<User, 'password'>;
+type UserWithoutPassword = Omit<User, "password">;
 type CategoryWithProducts = Category & { products: Product[] };
+type OrdersStatus =
+  | "pending"
+  | "confirmed"
+  | "prepared"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
 
 export interface IStorage {
   // User operations for JWT Auth
@@ -58,9 +65,18 @@ export interface IStorage {
   clearCart(userId: string): Promise<void>;
 
   // Order operations
-  createOrder(order: InsertOrder, items: Omit<InsertOrderItem, 'orderId'>[]): Promise<Order>;
-  getOrder(id: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined>;
-  getUserOrders(userId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] })[]>;
+  createOrder(
+    order: InsertOrder,
+    items: Omit<InsertOrderItem, "orderId">[]
+  ): Promise<Order>;
+  getOrder(
+    id: string
+  ): Promise<
+    (Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined
+  >;
+  getUserOrders(
+    userId: string
+  ): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] })[]>;
   updateOrderStatus(id: string, status: string): Promise<Order>;
 }
 
@@ -86,7 +102,6 @@ export class DatabaseStorage implements IStorage {
     return await db.select({ ...rest }).from(users);
   }
 
-
   // Admin operations
   async createAdmin(adminData: InsertAdmin): Promise<Admin> {
     const [admin] = await db.insert(admins).values(adminData).returning();
@@ -94,7 +109,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAdminByEmail(email: string): Promise<Admin | undefined> {
-    const [admin] = await db.select().from(admins).where(eq(admins.email, email));
+    const [admin] = await db
+      .select()
+      .from(admins)
+      .where(eq(admins.email, email));
     return admin;
   }
 
@@ -103,14 +121,19 @@ export class DatabaseStorage implements IStorage {
     return admin;
   }
 
-
   // Category operations
   async getCategories(): Promise<Category[]> {
-    return await db.select().from(categories).where(eq(categories.isActive, true));
+    return await db
+      .select()
+      .from(categories)
+      .where(eq(categories.isActive, true));
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db.insert(categories).values(category).returning();
+    const [newCategory] = await db
+      .insert(categories)
+      .values(category)
+      .returning();
     return newCategory;
   }
 
@@ -120,18 +143,26 @@ export class DatabaseStorage implements IStorage {
 
   // Product operations
   async getProducts(): Promise<Product[]> {
-    return await db.select().from(products).where(eq(products.isAvailable, true));
+    return await db
+      .select()
+      .from(products)
+      .where(eq(products.isAvailable, true));
   }
 
   async getProductsByCategory(categoryId: string): Promise<Product[]> {
     return await db
       .select()
       .from(products)
-      .where(and(eq(products.categoryId, categoryId), eq(products.isAvailable, true)));
+      .where(
+        and(eq(products.categoryId, categoryId), eq(products.isAvailable, true))
+      );
   }
 
   async getProduct(id: string): Promise<Product | undefined> {
-    const [product] = await db.select().from(products).where(eq(products.id, id));
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, id));
     return product;
   }
 
@@ -140,7 +171,10 @@ export class DatabaseStorage implements IStorage {
     return newProduct;
   }
 
-  async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product> {
+  async updateProduct(
+    id: string,
+    product: Partial<InsertProduct>
+  ): Promise<Product> {
     const [updatedProduct] = await db
       .update(products)
       .set({ ...product, updatedAt: new Date() })
@@ -150,7 +184,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Cart operations
-  async getCartItems(userId: string): Promise<(CartItem & { product: Product })[]> {
+  async getCartItems(
+    userId: string
+  ): Promise<(CartItem & { product: Product })[]> {
     return await db
       .select({
         id: cartItems.id,
@@ -171,7 +207,12 @@ export class DatabaseStorage implements IStorage {
     const [existingItem] = await db
       .select()
       .from(cartItems)
-      .where(and(eq(cartItems.userId, cartItem.userId), eq(cartItems.productId, cartItem.productId)));
+      .where(
+        and(
+          eq(cartItems.userId, cartItem.userId),
+          eq(cartItems.productId, cartItem.productId)
+        )
+      );
 
     if (existingItem) {
       // Update quantity
@@ -179,7 +220,7 @@ export class DatabaseStorage implements IStorage {
         .update(cartItems)
         .set({
           quantity: existingItem.quantity + cartItem.quantity!,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(cartItems.id, existingItem.id))
         .returning();
@@ -209,13 +250,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Order operations
-  async createOrder(order: InsertOrder, items: Omit<InsertOrderItem, 'orderId'>[]): Promise<Order> {
+  async createOrder(
+    order: InsertOrder,
+    items: Omit<InsertOrderItem, "orderId">[]
+  ): Promise<Order> {
     return await db.transaction(async (tx) => {
       const [newOrder] = await tx.insert(orders).values(order).returning();
 
-      await tx.insert(orderItems).values(
-        items.map(item => ({ ...item, orderId: newOrder.id }))
-      );
+      await tx
+        .insert(orderItems)
+        .values(items.map((item) => ({ ...item, orderId: newOrder.id })));
 
       // Clear cart after order
       await tx.delete(cartItems).where(eq(cartItems.userId, order.userId));
@@ -224,7 +268,11 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getOrder(id: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined> {
+  async getOrder(
+    id: string
+  ): Promise<
+    (Order & { orderItems: (OrderItem & { product: Product })[] }) | undefined
+  > {
     const [order] = await db.select().from(orders).where(eq(orders.id, id));
     if (!order) return undefined;
 
@@ -245,7 +293,9 @@ export class DatabaseStorage implements IStorage {
     return { ...order, orderItems: items };
   }
 
-  async getUserOrders(userId: string): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] })[]> {
+  async getUserOrders(
+    userId: string
+  ): Promise<(Order & { orderItems: (OrderItem & { product: Product })[] })[]> {
     const userOrders = await db
       .select()
       .from(orders)
@@ -296,7 +346,46 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(orders.userId, users.id))
       .orderBy(desc(orders.createdAt));
   }
+  async getOrdersWithStatus(status: OrdersStatus): Promise<Order[]> {
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.status, status))
+      .orderBy(desc(orders.createdAt));
+  }
 
+  async getAllCategories(): Promise<Category[]> {
+    return await db.select().from(categories).orderBy(desc(categories.createdAt));
+  }
+
+  async getCategory(id: string): Promise<Category | undefined> {
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category;
+  }
+  async updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category> {
+    const [updatedCategory] = await db
+      .update(categories)
+      .set({ ...category, updatedAt: new Date() })
+      .where(eq(categories.id, id))
+      .returning();
+    return updatedCategory;
+  }
+
+  async deleteProduct(id: string) {
+    return await db.delete(products).where(eq(products.id, id)).returning();
+    // return await db.update(products).set({ isAvailable: false, updatedAt: new Date() }).where(eq(products.id, id)).returning();
+  }
+
+  async getAllProductsByCategory(params: { categoryId: string }) {
+    return await db
+      .select()
+      .from(products)
+      .where(and(eq(products.categoryId, params.categoryId)));
+  }
+
+  async getAllProducts(): Promise<Product[]> {
+    return await db.select().from(products);
+  }
 }
 
 export const storage = new DatabaseStorage();

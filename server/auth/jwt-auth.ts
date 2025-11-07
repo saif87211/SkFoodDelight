@@ -70,10 +70,21 @@ export class JWTAuth {
     }
 
     if (!payload.adminId) {
-      return res.status(403).json({ message: 'Admin access required' });
+      return res.status(403).json({ message: 'Admin access required', payload });
     }
+
+    const admin = await storage.getAdmin(payload.adminId);
+
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    if (!admin.isActive) {
+      return res.status(403).json({ message: 'Admin account is inactive' });
+    }
+
     // Attach user info to request
-    (req as any).user = payload;
+    (req as any).admin = admin;
     next();
   };
 
@@ -132,10 +143,10 @@ export class JWTAuth {
       if (existingAdmin) {
         throw new Error('Admin already exists');
       }
-  
+
       // Hash password
       const hashedPassword = await this.hashPassword(password);
-  
+
       // Create user
       const admin = await storage.createAdmin({
         email,
@@ -143,12 +154,12 @@ export class JWTAuth {
         firstName: firstName || '',
         lastName: lastName || '',
       });
-  
+
       console.log(admin);
-  
+
       // Generate token
       const token = this.generateToken({ adminId: admin?.id, email: admin?.email! });
-  
+
       return { admin, token };
     } catch (error) {
       throw error;

@@ -45,8 +45,8 @@ export const admins = pgTable("admin", {
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   phone: varchar("phone"),
-  isActive: boolean("is_active").default(true),
-  role: varchar("role").notNull().default("superadmin"), // manager, staff, superadmin
+  isActive: boolean("is_active").default(false),
+  role: varchar("role").notNull().default("staff"), // manager, staff, superadmin
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -55,11 +55,12 @@ export const admins = pgTable("admin", {
 export const categories = pgTable("categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
-  slug: varchar("slug").notNull().unique(),
+  slug: varchar("slug").notNull(),
   description: text("description"),
   imageUrl: varchar("image_url"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Products
