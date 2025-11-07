@@ -141,6 +141,7 @@ export default function AdminAuth() {
                         type="email"
                         placeholder="your@email.com"
                         data-testid="input-login-email"
+                        className="ring ring-[#ededed]"
                         {...loginForm.register("email")}
                       />
                       {loginForm.formState.errors.email && (
@@ -156,6 +157,7 @@ export default function AdminAuth() {
                         type="password"
                         placeholder="••••••••"
                         data-testid="input-login-password"
+                        className="ring ring-[#ededed]"
                         {...loginForm.register("password")}
                       />
                       {loginForm.formState.errors.password && (

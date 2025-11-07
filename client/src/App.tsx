@@ -9,8 +9,6 @@ import { useAdminAuth } from "@/hooks/useAdminAuth"; // Import the admin auth ho
 import AuthPage from "@/pages/admin/auth-page";
 import AdminAuth from "@/pages/admin/admin-auth";
 import AdminDashboard from "@/pages/admin/admin-dashboard";
-import AdminCategory from "@/pages/admin/admin-category";
-import AdminProduct from "@/pages/admin/admin-product";
 import Home from "@/pages/home";
 import ProductDetail from "@/pages/product-detail";
 import Cart from "@/pages/cart";
@@ -19,10 +17,77 @@ import OrderConfirmation from "@/pages/order-confirmation";
 import Orders from "@/pages/orders";
 import NotFound from "@/pages/not-found"; // Import NotFound page
 import AdminLayout from "./pages/admin/admin-layout";
+import AdminCategoryList from "./pages/admin/admin-category-list";
+import AdminProductAction from "./pages/admin/admin-product-action";
+import AdminCategoryAction from "./pages/admin/admin-category-action";
+import AdminProductList from "./pages/admin/admin-product-list";
+
+type RouteObject = {
+  path: string;
+  component: React.JSX.Element;
+};
 
 const script = document.createElement("script");
 script.src = "https://checkout.razorpay.com/v1/checkout.js";
 document.body.appendChild(script);
+
+const secureAdminRoutes: RouteObject[] = [
+  {
+    path: "/admin/dashboard",
+    component: <AdminDashboard />,
+  },
+  {
+    path: "/admin/categories",
+    component: <AdminCategoryList />,
+  },
+  {
+    path: "/admin/category-action",
+    component: <AdminCategoryAction />,
+  },
+  {
+    path: "/admin/category-action/:id",
+    component: <AdminCategoryAction />,
+  },
+  {
+    path: "/admin/products",
+    component: <AdminProductList />,
+  },
+  {
+    path: "/admin/product-action",
+    component: <AdminProductAction />,
+  },
+  {
+    path: "/admin/product-action/:id",
+    component: <AdminProductAction />,
+  },
+];
+
+const userRoutes: RouteObject[] = [
+  {
+    path: "/home",
+    component: <Home />,
+  },
+  {
+    path: "/product/:id",
+    component: <ProductDetail />,
+  },
+  {
+    path: "/cart",
+    component: <Cart />,
+  },
+  {
+    path: "/checkout",
+    component: <Checkout />,
+  },
+  {
+    path: "/order-confirmation/:id",
+    component: <OrderConfirmation />,
+  },
+  {
+    path: "/orders",
+    component: <Orders />,
+  },
+];
 
 // Protected route component for users
 function ProtectedRoute({
@@ -74,15 +139,9 @@ function AdminRouter() {
   return (
     <Switch>
       <Route path="/admin/auth" component={AdminAuth} />
-      <ProtectedAdminRoute path="/admin/dashboard">
-        <AdminDashboard />
-      </ProtectedAdminRoute>
-      <ProtectedAdminRoute path="/admin/category">
-        <AdminCategory />
-      </ProtectedAdminRoute>
-      <ProtectedAdminRoute path="/admin/product">
-        <AdminProduct />
-      </ProtectedAdminRoute>
+      {secureAdminRoutes.map(({ path, component }) => (
+        <ProtectedAdminRoute key={path} path={path} children={component} />
+      ))}
       <Route path="*">
         <NotFound />
       </Route>
@@ -100,25 +159,10 @@ function Router() {
       <Route path="/admin/*" component={AdminRouter} />
 
       {/* User routes */}
-      <ProtectedRoute path="/home">
-        <Home />
-      </ProtectedRoute>
-      <ProtectedRoute path="/product/:id">
-        <ProductDetail />
-      </ProtectedRoute>
-      <ProtectedRoute path="/cart">
-        <Cart />
-      </ProtectedRoute>
-      <ProtectedRoute path="/checkout">
-        <Checkout />
-      </ProtectedRoute>
-      <ProtectedRoute path="/order-confirmation/:id">
-        <OrderConfirmation />
-      </ProtectedRoute>
-      <ProtectedRoute path="/orders">
-        <Orders />
-      </ProtectedRoute>
-
+      {userRoutes.map(({ path, component }) => (
+        <ProtectedRoute key={path} path={path} children={component} />
+      ))}
+      
       {/* Not found route */}
       <Route path="*">
         <NotFound />

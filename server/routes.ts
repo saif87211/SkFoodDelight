@@ -9,7 +9,7 @@ import {
   insertOrderSchema,
   insertOrderItemSchema,
   registerSchema,
-  loginSchema
+  loginSchema,
 } from "@shared/schema";
 import Razorpay from "razorpay";
 import { z } from "zod";
@@ -21,14 +21,14 @@ function configRazorPay() {
   const razorpay = new Razorpay({
     key_id,
     key_secret: process.env.RAZORPAY_SECRET!,
-  })
+  });
 
   return { razorpay, key_id } as const;
 }
 
 export async function registerRoutes(app: Express, io: any): Promise<Server> {
   // Auth routes
-  app.post('/api/auth/register', async (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
     try {
       const userData = registerSchema.parse(req.body);
       const { user, token } = await JWTAuth.register(
@@ -53,10 +53,13 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     try {
       const credentials = loginSchema.parse(req.body);
-      const { user, token } = await JWTAuth.login(credentials.email, credentials.password);
+      const { user, token } = await JWTAuth.login(
+        credentials.email,
+        credentials.password
+      );
 
       const userResponse = {
         id: user.id,
@@ -73,36 +76,41 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', JWTAuth.authenticateToken, async (req, res) => {
-    res.removeHeader("authorization")
+  app.post("/api/auth/logout", JWTAuth.authenticateToken, async (req, res) => {
+    res.removeHeader("authorization");
     res.removeHeader("set-cookie");
     return res.status(200).json({ message: "User logout successfully" });
-  })
-
-  app.get('/api/auth/user', JWTAuth.authenticateToken, async (req: any, res) => {
-    try {
-      const user = await storage.getUser(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const userResponse = {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profileImageUrl: user.profileImageUrl,
-      };
-
-      res.json(userResponse);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
   });
 
+  app.get(
+    "/api/auth/user",
+    JWTAuth.authenticateToken,
+    async (req: any, res) => {
+      try {
+        const user = await storage.getUser(req.user.userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        const userResponse = {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+        };
+
+        res.json(userResponse);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({ message: "Failed to fetch user" });
+      }
+    }
+  );
+
   // Category routes
-  app.get('/api/categories', async (req, res) => {
+  // get only active categories
+  app.get("/api/categories", JWTAuth.authenticateToken, async (req, res) => {
     try {
       const categories = await storage.getCategories();
       res.json(categories);
@@ -112,19 +120,8 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.post('/api/categories', JWTAuth.authenticateToken, async (req, res) => {
-    try {
-      const categoryData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(categoryData);
-      res.json(category);
-    } catch (error) {
-      console.error("Error creating category:", error);
-      res.status(400).json({ message: "Failed to create category" });
-    }
-  });
-
   // Product routes
-  app.get('/api/products', async (req, res) => {
+  app.get("/api/products", JWTAuth.authenticateToken, async (req, res) => {
     try {
       const { category } = req.query;
       const products = category
@@ -137,7 +134,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.get('/api/products/:id', async (req, res) => {
+  app.get("/api/products/:id", JWTAuth.authenticateToken, async (req, res) => {
     try {
       const product = await storage.getProduct(req.params.id);
       if (!product) {
@@ -150,19 +147,8 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.post('/api/products', JWTAuth.authenticateToken, async (req, res) => {
-    try {
-      const productData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(productData);
-      res.json(product);
-    } catch (error) {
-      console.error("Error creating product:", error);
-      res.status(400).json({ message: "Failed to create product" });
-    }
-  });
-
   // Cart routes
-  app.get('/api/cart', JWTAuth.authenticateToken, async (req: any, res) => {
+  app.get("/api/cart", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
       const cartItems = await storage.getCartItems(userId);
@@ -173,7 +159,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.post('/api/cart', JWTAuth.authenticateToken, async (req: any, res) => {
+  app.post("/api/cart", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
       const cartItemData = insertCartItemSchema.parse({ ...req.body, userId });
@@ -185,9 +171,11 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.patch('/api/cart/:id', JWTAuth.authenticateToken, async (req, res) => {
+  app.patch("/api/cart/:id", JWTAuth.authenticateToken, async (req, res) => {
     try {
-      const { quantity } = z.object({ quantity: z.number().min(1) }).parse(req.body);
+      const { quantity } = z
+        .object({ quantity: z.number().min(1) })
+        .parse(req.body);
       const cartItem = await storage.updateCartItem(req.params.id, quantity);
       res.json(cartItem);
     } catch (error) {
@@ -196,7 +184,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.delete('/api/cart/:id', JWTAuth.authenticateToken, async (req, res) => {
+  app.delete("/api/cart/:id", JWTAuth.authenticateToken, async (req, res) => {
     try {
       await storage.removeFromCart(req.params.id);
       res.json({ message: "Item removed from cart" });
@@ -206,7 +194,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.delete('/api/cart', JWTAuth.authenticateToken, async (req: any, res) => {
+  app.delete("/api/cart", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
       await storage.clearCart(userId);
@@ -218,7 +206,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   });
 
   // Order routes
-  app.post('/api/orders', JWTAuth.authenticateToken, async (req: any, res) => {
+  app.post("/api/orders", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
 
@@ -231,8 +219,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
       console.log("Payment details:", paymentDetails);
 
       const orderSchema = insertOrderSchema.extend({
-        items: z.array(insertOrderItemSchema.omit({ orderId: true }))
-
+        items: z.array(insertOrderItemSchema.omit({ orderId: true })),
       });
       const { items, ...orderData } = orderSchema.parse({
         ...req.body,
@@ -240,7 +227,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
         paymentMethod: paymentDetails.method,
         paymentStatus: paymentDetails.status,
         paymentId: paymentDetails.id,
-        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000) // 45 minutes from now
+        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
       });
 
       const order = await storage.createOrder(orderData, items);
@@ -251,7 +238,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.get('/api/orders/:id', JWTAuth.authenticateToken, async (req, res) => {
+  app.get("/api/orders/:id", JWTAuth.authenticateToken, async (req, res) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
@@ -264,7 +251,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.get('/api/orders', JWTAuth.authenticateToken, async (req: any, res) => {
+  app.get("/api/orders", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
       const orders = await storage.getUserOrders(userId);
@@ -276,7 +263,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   });
 
   // Payment endpoint
-  app.post('/api/payment', JWTAuth.authenticateToken, async (req: any, res) => {
+  app.post("/api/payment", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const amount = z.string().parse(req.body.totalAmount);
       const { razorpay, key_id } = configRazorPay();
@@ -287,36 +274,48 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
       });
 
       return res.status(200).json({ success: true, order, token: key_id });
-
     } catch (error) {
       console.error("Error processing payment:", error);
       return res.status(500).json({ message: "Payment processing failed" });
     }
   });
 
-  app.post("/api/payment/verify-payment", JWTAuth.authenticateToken, async (req, res) => {
-    try {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  app.post(
+    "/api/payment/verify-payment",
+    JWTAuth.authenticateToken,
+    async (req, res) => {
+      try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+          req.body;
 
-      const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
 
-      const expectedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_APT_SECRET!)
-        .update(body.toString())
-        .digest("hex");
+        const expectedSignature = crypto
+          .createHmac("sha256", process.env.RAZORPAY_APT_SECRET!)
+          .update(body.toString())
+          .digest("hex");
 
-      if (expectedSignature === razorpay_signature) {
-        return res.status(200).json({ success: true, message: 'Payment verified successfully.' });
+        if (expectedSignature === razorpay_signature) {
+          return res
+            .status(200)
+            .json({ success: true, message: "Payment verified successfully." });
+        }
+
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid signature." });
+      } catch (error) {
+        console.error("Error in verification of payment:", error);
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid signature." });
       }
-
-      return res.status(400).json({ success: false, message: 'Invalid signature.' });
-    } catch (error) {
-      console.error("Error in verification of payment:", error);
-      return res.status(400).json({ success: false, message: 'Invalid signature.' });
     }
-  });
+  );
 
-  // Admin dashboard route
+  // admin routes
+
+  //register admin
   app.post("/api/admin/register", async (req, res) => {
     try {
       const adminData = registerSchema.parse(req.body);
@@ -336,14 +335,20 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
 
       return res.status(201).json({ admin: adminResponse, token });
     } catch (error: any) {
-      return res.status(400).json({ message: error.message || "Registration failed" });
+      return res
+        .status(400)
+        .json({ message: error.message || "Registration failed" });
     }
   });
 
+  // login admin
   app.post("/api/admin/login", async (req, res) => {
     try {
       const credentials = loginSchema.parse(req.body);
-      const { admin, token } = await JWTAuth.adminLogin(credentials.email, credentials.password);
+      const { admin, token } = await JWTAuth.adminLogin(
+        credentials.email,
+        credentials.password
+      );
 
       const adminResponse = {
         id: admin.id,
@@ -358,50 +363,168 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/logout", JWTAuth.authenticateAdminToken, async (req, res) => {
-    res.removeHeader("authorization")
-    res.removeHeader("set-cookie");
-    return res.status(200).json({ message: "Admin logout successfully" });
-  });
-
-  app.get('/api/admin-dashboard', JWTAuth.authenticateAdminToken, async (req: any, res) => {
-    try {
-      // const user = await storage.getUser(req.user.userId);
-      // if (!user) {
-      //   return res.status(404).json({ message: "User not found" });
-      // }
-
-      const dashboardData = {
-        totalUsers: await storage.getAllUsers(),
-        totalOrders: await storage.getOrdersWithItemsAndUsers(),
-        totalCategoriesWithPorducts: await storage.getAllCategoriesWithProducts(),
-      };
-
-      res.json(dashboardData);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard data" });
+  // logout admin
+  app.post(
+    "/api/admin/logout",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      res.removeHeader("authorization");
+      res.removeHeader("set-cookie");
+      return res.status(200).json({ message: "Admin logout successfully" });
     }
-  });
+  );
 
-  app.get('/api/auth/admin', JWTAuth.authenticateAdminToken, async (req: any, res) => {
-    try {
+  // admin dashboard route
+  app.get(
+    "/api/admin-dashboard",
+    JWTAuth.authenticateAdminToken,
+    async (req: any, res) => {
+      try {
+        const dashboardData = {
+          totalUsers: await storage.getAllUsers(),
+          totalOrders: await storage.getAllorders(),
+          totalCategoriesWithPorducts:
+            await storage.getAllCategoriesWithProducts(),
+        };
 
-      const adminResponse = {
-        id: req.admin.id,
-        email: req.admin.email,
-        firstName: req.admin.firstName,
-        lastName: req.admin.lastName,
-        profileImageUrl: req.admin.profileImageUrl,
-        isActive: req.admin.isActive,
-      };
-
-      res.json(adminResponse);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+        res.json(dashboardData);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        res.status(500).json({ message: "Failed to fetch dashboard data" });
+      }
     }
-  });
+  );
+
+  // get admin details
+  app.get(
+    "/api/auth/admin",
+    JWTAuth.authenticateAdminToken,
+    async (req: any, res) => {
+      try {
+        const adminResponse = {
+          id: req.admin.id,
+          email: req.admin.email,
+          firstName: req.admin.firstName,
+          lastName: req.admin.lastName,
+          profileImageUrl: req.admin.profileImageUrl,
+          isActive: req.admin.isActive,
+        };
+
+        res.json(adminResponse);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({ message: "Failed to fetch user" });
+      }
+    }
+  );
+
+  // get orders by status
+  app.get(
+    "/api/admin/orders/:orderstatus",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      console.log("Order status param:", req.params.orderstatus);
+      try {
+        const orders = await storage.getOrdersWithStatus(
+          req.params.orderstatus as any
+        );
+        return res.json(orders);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        return res.status(500).json({ message: "Failed to fetch orders" });
+      }
+    }
+  );
+
+  // creatre new categories
+  app.post(
+    "/api/categories",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const categoryData = insertCategorySchema.parse(req.body);
+        const category = await storage.createCategory(categoryData);
+        res.json(category);
+      } catch (error) {
+        console.error("Error creating category:", error);
+        res.status(400).json({ message: "Failed to create category" });
+      }
+    }
+  );
+
+  // get category by id
+  app.get(
+    "/api/categories/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        console.log("Here is the req id ", req.params.id);
+        const category = await storage.getCategory(req.params.id);
+        if (!category) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+        res.json(category);
+      } catch (error) {
+        console.error("Error fetching category:", error);
+        res.status(500).json({ message: "Failed to fetch category" });
+      }
+    }
+  );
+
+  // update category by id
+  app.patch(
+    "/api/categories/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        console.log("req body: ", req.body);
+        const categoryData = insertCategorySchema
+          .partial()
+          .parse({ id, ...req.body });
+        const category = await storage.updateCategory(id, categoryData);
+        res.json(category);
+      } catch (error) {
+        console.error("Error updating category:", error);
+        res.status(400).json({ message: "Failed to update category" });
+      }
+    }
+  );
+
+  // get all categories
+  app.get(
+    "/api/admin/categories",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const categories = await storage.getAllCategories();
+        res.json(categories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        res.status(500).json({ message: "Failed to fetch categories" });
+      }
+    }
+  );
+
+  //
+  app.get(
+    "/api/admin/products",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const { category } = req.query;
+        const products = category
+          ? await storage.getAllProductsByCategory({
+              categoryId: category as string,
+            })
+          : await storage.getAllProducts();
+        res.json(products);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        res.status(500).json({ message: "Failed to fetch products" });
+      }
+    }
+  );
 
   const httpServer = createServer(app);
   return httpServer;
