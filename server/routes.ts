@@ -14,6 +14,11 @@ import {
 import Razorpay from "razorpay";
 import { z } from "zod";
 import crypto from "crypto";
+import {
+  uploadFileOnCloudinary,
+  deleteFileOnCloudinary,
+} from "./utils/cloudinary";
+import { upload } from "./utils/multer";
 
 function configRazorPay() {
   const key_id = process.env.RAZORPAY_KEY_ID!;
@@ -266,6 +271,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   app.post("/api/payment", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const amount = z.string().parse(req.body.totalAmount);
+      console.log("Amount received for payment:", amount);
       const { razorpay, key_id } = configRazorPay();
 
       const order = await razorpay.orders.create({
@@ -436,9 +442,9 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   );
 
-  // creatre new categories
+  // create new categories
   app.post(
-    "/api/categories",
+    "/api/admin/categories",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
@@ -473,12 +479,11 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
 
   // update category by id
   app.patch(
-    "/api/categories/:id",
+    "/api/admin/categories/:id",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
         const id = req.params.id;
-        console.log("req body: ", req.body);
         const categoryData = insertCategorySchema
           .partial()
           .parse({ id, ...req.body });
@@ -506,7 +511,78 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   );
 
-  //
+  // delete category by id
+  app.delete(
+    "/api/admin/categories/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        await storage.deleteCategory(id);
+        res.json({ message: "Category deleted successfully" });
+      } catch (error) {
+        console.error("Error deleting category:", error);
+        res.status(500).json({ message: "Failed to delete category" });
+      }
+    }
+  );
+
+  // create new product
+  app.post(
+    "/api/admin/products",
+    upload.single("imageUrl"),
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const imageUrl = req.file?.path || null;
+
+        let cloudinaryResponse;
+        if (imageUrl) {
+          cloudinaryResponse = await uploadFileOnCloudinary(imageUrl);
+        }
+        const productData = insertProductSchema.parse({
+          ...req.body,
+          imageUrl: cloudinaryResponse?.secure_url || imageUrl,
+        });
+        const product = await storage.createProduct(productData);
+        res.json(product);
+      } catch (error) {
+        console.error("Error creating product:", error);
+        res.status(400).json({ message: "Failed to create product" });
+      }
+    }
+  );
+
+  // update product by id
+  app.patch(
+    "/api/admin/products/:id",
+    upload.single("imageUrl"),
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        const imageUrl = req.file?.path || null;
+
+        let cloudinaryResponse;
+        if (imageUrl) {
+          cloudinaryResponse = await uploadFileOnCloudinary(imageUrl);
+        }
+
+        const productData = insertProductSchema.partial().parse({
+          id,
+          ...req.body,
+          imageUrl: cloudinaryResponse?.secure_url || imageUrl,
+        });
+        const product = await storage.updateProduct(id, productData);
+        res.json(product);
+      } catch (error) {
+        console.error("Error updating product:", error);
+        res.status(400).json({ message: "Failed to update product" });
+      }
+    }
+  );
+
+  // get all products or by category
   app.get(
     "/api/admin/products",
     JWTAuth.authenticateAdminToken,
@@ -522,6 +598,21 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
       } catch (error) {
         console.error("Error fetching products:", error);
         res.status(500).json({ message: "Failed to fetch products" });
+      }
+    }
+  );
+
+  app.delete(
+    "/api/admin/products/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        await storage.deleteProduct(id);
+        res.json({ message: "Product deleted successfully" });
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        res.status(500).json({ message: "Failed to delete product" });
       }
     }
   );

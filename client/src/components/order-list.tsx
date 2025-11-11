@@ -44,7 +44,7 @@ const OrdersList = ({
   }
 
   return (
-    <div className="flex flex-col mt-2 gap-y-4 break-words overflow-y-auto max-h-screen pr-3">
+    <div className="flex flex-col mt-2 gap-y-4 break-words pr-3">
       {orders?.length !== 0 &&
         orders?.map((order) => (
           <div

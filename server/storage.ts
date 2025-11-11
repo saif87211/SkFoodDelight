@@ -386,6 +386,10 @@ export class DatabaseStorage implements IStorage {
   async getAllProducts(): Promise<Product[]> {
     return await db.select().from(products);
   }
+
+  async deleteCategory(id: string) {
+    return await db.delete(categories).where(eq(categories.id, id)).returning();
+  }
 }
 
 export const storage = new DatabaseStorage();

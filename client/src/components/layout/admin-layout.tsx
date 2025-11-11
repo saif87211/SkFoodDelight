@@ -1,6 +1,7 @@
-import AdminHeader from "@/components/admin-header";
+import AdminHeader from "@/components/layout/admin-header";
 import AdminSidebar from "@/components/admin-sidebar";
 import React, { ReactNode, ReactPortal, useState } from "react";
+import AdminFooter from "./admin-footer";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,12 +15,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminHeader onSidebarToggle={toggleSidebar} />
-
       <div className="flex">
         <AdminSidebar isOpen={isSidebarOpen} onClose={toggleSidebar} />
-
         <main className="flex-1 p-4">{children}</main>
       </div>
+      <AdminFooter />
     </div>
   );
 };
