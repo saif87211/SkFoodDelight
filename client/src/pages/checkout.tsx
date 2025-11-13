@@ -113,10 +113,6 @@ export default function Checkout() {
         });
 
         try {
-          console.log("Recording order with data in handlePayment Success:", {
-            paymentId: response.razorpay_payment_id,
-            ...orderData
-          });
           const recordOrderResponse = await apiRequest("POST", "/api/orders", {
             paymentId: response.razorpay_payment_id,
             ...orderData

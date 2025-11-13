@@ -19,6 +19,7 @@ import {
   deleteFileOnCloudinary,
 } from "./utils/cloudinary";
 import { upload } from "./utils/multer";
+import { log } from "./vite";
 
 function configRazorPay() {
   const key_id = process.env.RAZORPAY_KEY_ID!;
@@ -221,7 +222,10 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
 
       const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
 
-      console.log("Payment details:", paymentDetails);
+      log(
+        `Payment details fetched: ${JSON.stringify(paymentDetails)}`,
+        "routes"
+      );
 
       const orderSchema = insertOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true })),
@@ -271,14 +275,13 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   app.post("/api/payment", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const amount = z.string().parse(req.body.totalAmount);
-      console.log("Amount received for payment:", amount);
+
       const { razorpay, key_id } = configRazorPay();
 
       const order = await razorpay.orders.create({
-        amount: parseFloat(amount) * 100,
+        amount: Math.round(parseFloat(amount) * 100), // amount in the smallest currency unit
         currency: "INR",
       });
-
       return res.status(200).json({ success: true, order, token: key_id });
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -286,6 +289,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
+  // payment verification endpoint (payment status update)
   app.post(
     "/api/payment/verify-payment",
     JWTAuth.authenticateToken,
@@ -300,8 +304,13 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
           .createHmac("sha256", process.env.RAZORPAY_APT_SECRET!)
           .update(body.toString())
           .digest("hex");
-
         if (expectedSignature === razorpay_signature) {
+          
+          const order = await storage.getOrderUsingRazorPayID(
+            razorpay_order_id
+          );
+          io.emit("orderin", order);
+
           return res
             .status(200)
             .json({ success: true, message: "Payment verified successfully." });
@@ -429,7 +438,6 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     "/api/admin/orders/:orderstatus",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
-      console.log("Order status param:", req.params.orderstatus);
       try {
         const orders = await storage.getOrdersWithStatus(
           req.params.orderstatus as any
@@ -464,7 +472,6 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
-        console.log("Here is the req id ", req.params.id);
         const category = await storage.getCategory(req.params.id);
         if (!category) {
           return res.status(404).json({ message: "Category not found" });
@@ -613,6 +620,26 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
       } catch (error) {
         console.error("Error deleting product:", error);
         res.status(500).json({ message: "Failed to delete product" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/admin/new-payment",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const data = req.body;
+        log(`New payment data received: ${JSON.stringify(data)}`, "routes");
+
+        io.emit("orderin", data);
+        // Process the new payment data as needed
+        res
+          .status(200)
+          .json({ message: "New payment data received successfully" });
+      } catch (error) {
+        console.error("Error processing new payment data:", error);
+        res.status(500).json({ message: "Failed to process new payment data" });
       }
     }
   );
