@@ -93,7 +93,7 @@ export const cartItems = pgTable("cart_items", {
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  status: varchar("status").notNull().default("pending"), // pending, confirmed, preparing, out_for_delivery, delivered, cancelled
+  status: varchar("status").notNull().default("orderin"), // pending, confirmed, preparing, out_for_delivery, delivered, cancelled
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).default("49"),
   tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),

@@ -2,15 +2,13 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import http from "http";
-import { Server } from "socket.io";
+import { initializeSocket } from "./socket";
+import { json } from "stream/consumers";
 
 const app = express();
 
-const socketServer = http.createServer(app);
-
-const io = new Server(socketServer, {
-  pingTimeout: 60000,
-});
+const server = http.createServer(app);
+const io = initializeSocket(server);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -46,7 +44,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app, io);
+  await registerRoutes(app, io, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -69,12 +67,15 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    }
+  );
 })();

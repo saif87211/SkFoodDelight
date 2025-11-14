@@ -34,7 +34,7 @@ const productSchema = z.object({
   description: z.string().min(4, "Provide small description"),
   price: z.string().min(1, "Price must be at least 1"),
   preparationTime: z.string().min(1, "Preparation time must be at least 1"),
-  rating: z.string().min(1).max(5, "Rating must be between 1 and 5"),
+  rating: z.string().min(0.1).max(5, "Rating must be between 1 and 5"),
   isAvailable: z.boolean().default(false),
   totalRatings: z.string().min(0, "Total ratings cannot be negative"),
   categoryId: z.string().min(1, "Category is required"),
@@ -128,7 +128,7 @@ export default function AdminProductAction() {
         );
 
         const method = isEdit ? "PATCH" : "POST";
-        const url = isEdit ? `/api/products/${id}` : `/api/products`;
+        const url = isEdit ? `/api/admin/products/${id}` : `/api/admin/products`;
 
         const res = await fetch(url, {
           method,
@@ -145,12 +145,12 @@ export default function AdminProductAction() {
       if (isEdit) {
         const response = await apiRequest(
           "PATCH",
-          `/api/products/${id}`,
+          `/api/admin/products/${id}`,
           formValues
         );
         return response.json();
       } else {
-        const response = await apiRequest("POST", `/api/products`, formValues);
+        const response = await apiRequest("POST", `/api/admin/products`, formValues);
         return response.json();
       }
     },
@@ -160,7 +160,7 @@ export default function AdminProductAction() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
       // redirect back to product list
-      setLocation("/products", { replace: true });
+      setLocation("/admin/products", { replace: true });
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
@@ -240,7 +240,7 @@ export default function AdminProductAction() {
                           type="number"
                           placeholder="Price"
                           pattern="^\d+(\.\d+)?$"
-                          step="0.1"
+                          step="any"
                           min="0"
                           className="border border-slate-300"
                           data-testid="input-product-price"

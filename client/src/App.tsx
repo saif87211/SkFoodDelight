@@ -16,7 +16,7 @@ import Checkout from "@/pages/checkout";
 import OrderConfirmation from "@/pages/order-confirmation";
 import Orders from "@/pages/orders";
 import NotFound from "@/pages/not-found"; // Import NotFound page
-import AdminLayout from "./pages/admin/admin-layout";
+import AdminLayout from "./components/layout/admin-layout";
 import AdminCategoryList from "./pages/admin/admin-category-list";
 import AdminProductAction from "./pages/admin/admin-product-action";
 import AdminCategoryAction from "./pages/admin/admin-category-action";
@@ -100,7 +100,11 @@ function ProtectedRoute({
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -121,7 +125,11 @@ function ProtectedAdminRoute({
   const { adminUser, isAdminLoading } = useAdminAuth();
 
   if (isAdminLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+      </div>
+    );
   }
 
   if (!adminUser) {
@@ -162,7 +170,7 @@ function Router() {
       {userRoutes.map(({ path, component }) => (
         <ProtectedRoute key={path} path={path} children={component} />
       ))}
-      
+
       {/* Not found route */}
       <Route path="*">
         <NotFound />

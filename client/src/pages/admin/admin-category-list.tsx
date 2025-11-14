@@ -86,7 +86,7 @@ export default function AdminCategoryList() {
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: string) => {
       // this route is penditng
-      // await apiRequest("DELETE", `/api/admin/category/${id}`);
+      await apiRequest("DELETE", `/api/admin/categories/${id}`);
       console.log("Delete id: ", id);
     },
     onSuccess: () => {
@@ -138,87 +138,117 @@ export default function AdminCategoryList() {
             </div>
           </div>
 
-          <Table className="mb-0 border border-slate-200">
-            <TableHeader className="align-bottom border-b">
-              <TableRow className="">
-                <TableHead className="text-center font-semibold">
-                  Sr No.
-                </TableHead>
-                <TableHead className="text-center font-semibold">
-                  Category Name
-                </TableHead>
-                <TableHead className="text-center font-semibold">
-                  Category Description
-                </TableHead>
-                <TableHead className="text-center font-semibold">
-                  Date
-                </TableHead>
-                <TableHead className="text-center font-semibold">
-                  Is Active
-                </TableHead>
-                <TableHead className="text-center font-semibold">
-                  Options
-                </TableHead>
-              </TableRow>
-            </TableHeader>
+          {/* Mobile friendly list (visible on small screens) */}
+          <div className="space-y-3 sm:hidden">
+            {paginated.length > 0 ? (
+              paginated.map((category, index) => (
+                <div
+                  key={category.id}
+                  className="bg-white border border-slate-200 rounded-lg p-3 flex items-start justify-between"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-gray-800">{category.name}</div>
+                      <div className="text-xs text-gray-500">#{(page - 1) * PAGE_SIZE + index + 1}</div>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1 line-clamp-2">{category.description}</div>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                      <div>{new Date(category.updatedAt!).toLocaleDateString()}</div>
+                      <div>
+                        {category.isActive ? (
+                          <span className="text-green-500">Active</span>
+                        ) : (
+                          <span className="text-red-500">Inactive</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center ml-3 gap-2">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="rounded-full bg-green-500"
+                      aria-label={`Edit ${category.name}`}
+                      onClick={() => navigate(`/admin/category-action/${category.id}`)}
+                    >
+                      <Pencil className="hover:text-white" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="rounded-full bg-red-500"
+                      aria-label={`Delete ${category.name}`}
+                      onClick={() => deleteCategoryMutation.mutate(category.id)}
+                    >
+                      <Trash className="hover:text-white" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-sm text-gray-500 py-6">No categories found.</div>
+            )}
+          </div>
 
-            <TableBody className="font-light">
-              {paginated.length > 0 &&
-                paginated.map((category, index) => (
-                  <TableRow
-                    key={category.id}
-                    id={category.id}
-                    className="text-center"
-                  >
-                    <TableCell className="py-3">
-                      {(page - 1) * PAGE_SIZE + index + 1}.
-                    </TableCell>
-                    <TableCell className="py-3">{category.name}</TableCell>
-                    <TableCell className="py-3">
-                      {category.description}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      {new Date(category.createdAt!).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="py-3">
-                      {category.isActive ? (
-                        <Check className="text-green-500" />
-                      ) : (
-                        <X className="text-red-500" />
-                      )}
-                    </TableCell>
-                    <TableCell className="flex justify-center items-center gap-1 py-3">
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-full bg-green-500"
-                        aria-label={`Edit ${category.name}`}
-                        onClick={() => navigate(`/admin/category-action/${category.id}`)}
-                      >
-                        <Pencil className="hover:text-white" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="rounded-full bg-red-500"
-                        aria-label={`Delete ${category.name}`}
-                        onClick={() =>
-                          deleteCategoryMutation.mutate(category.id)
-                        }
-                      >
-                        <Trash className="hover:text-white" />
-                      </Button>
+          {/* Table view for larger screens */}
+          <div className="hidden sm:block overflow-x-auto">
+            <Table className="mb-0 min-w-full bg-white shadow-sm rounded-lg border border-slate-200">
+              <TableHeader className="bg-gray-50">
+                <TableRow className="">
+                  <TableHead className="text-left text-sm font-semibold text-gray-700 px-4 py-3 w-16">#</TableHead>
+                  <TableHead className="text-left text-sm font-semibold text-gray-700 px-4 py-3">Category</TableHead>
+                  <TableHead className="text-left text-sm font-semibold text-gray-700 px-4 py-3 hidden md:table-cell">Description</TableHead>
+                  <TableHead className="text-left text-sm font-semibold text-gray-700 px-4 py-3 hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="text-left text-sm font-semibold text-gray-700 px-4 py-3 w-24">Status</TableHead>
+                  <TableHead className="text-left text-sm font-semibold text-gray-700 px-4 py-3 w-40">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody className="font-normal">
+                {paginated.length > 0 &&
+                  paginated.map((category, index) => (
+                    <TableRow
+                      key={category.id}
+                      id={category.id}
+                      className="odd:bg-white even:bg-slate-50 hover:bg-gray-50"
+                    >
+                      <TableCell className="py-3 px-4 align-top text-sm">{(page - 1) * PAGE_SIZE + index + 1}.</TableCell>
+                      <TableCell className="py-3 px-4 align-top text-sm font-medium">{category.name}</TableCell>
+                      <TableCell className="py-3 px-4 align-top text-sm hidden md:table-cell text-gray-600">{category.description}</TableCell>
+                      <TableCell className="py-3 px-4 align-top text-sm hidden sm:table-cell text-gray-600">{new Date(category.updatedAt!).toLocaleDateString()}</TableCell>
+                      <TableCell className="py-3 px-4 align-top text-sm">{category.isActive ? (<span className="text-green-600 font-medium">Active</span>) : (<span className="text-red-600 font-medium">Inactive</span>)}</TableCell>
+                      <TableCell className="py-3 px-4 align-top text-sm">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="rounded-full bg-green-500"
+                            aria-label={`Edit ${category.name}`}
+                            onClick={() => navigate(`/admin/category-action/${category.id}`)}
+                          >
+                            <Pencil className="hover:text-white" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="rounded-full bg-red-500"
+                            aria-label={`Delete ${category.name}`}
+                            onClick={() => deleteCategoryMutation.mutate(category.id)}
+                          >
+                            <Trash className="hover:text-white" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                {paginated.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      No categories found.
                     </TableCell>
                   </TableRow>
-                ))}
-              {paginated.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    No categories found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+                )}
+              </TableBody>
 
             {/* Footer row kept inside table structure to preserve layout */}
             <TableFooter>
@@ -270,7 +300,8 @@ export default function AdminCategoryList() {
                 </TableCell>
               </TableRow>
             </TableFooter>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </main>

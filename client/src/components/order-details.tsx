@@ -1,9 +1,12 @@
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Contact, MapPin } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Order, OrderItem, Product } from "@shared/schema";
 import { Button } from "./ui/button";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OrderDetails({
   orderid: id,
@@ -19,6 +22,53 @@ export default function OrderDetails({
     retry: false,
     enabled: !!id,
   });
+
+  const { toast } = useToast();
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      if (!id) return;
+      const response = await apiRequest("PATCH", `/api/admin/orders/${id}`, {
+        status,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update order status");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({
+        queryKey: ["/api/admin/orders", data.status],
+      });
+      toast({
+        title: "Order Updated",
+        description: `Order status updated to ${data.status}`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update order status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateOrderStatsHandler = (status: string) => {
+    updateOrderStatusMutation.mutate(status);
+  };
 
   if (isLoading) {
     return (
@@ -112,7 +162,10 @@ export default function OrderDetails({
           {/* orders items */}
           {order?.orderItems &&
             order.orderItems.map((orderitem, index) => (
-              <div key={orderitem.productName} className="flex item-center mb-4">
+              <div
+                key={orderitem.productName}
+                className="flex item-center mb-4"
+              >
                 <img
                   src={orderitem.product.imageUrl || ""}
                   className="size-10 object-contain border border-primary rounded-sm mr-3"
@@ -142,12 +195,28 @@ export default function OrderDetails({
           </h4>
         </div>
         <div className="flex justify-end gap-4 mt-3">
-          {order.status === "orderin" && <Button size={"lg"}>Prepared</Button>}
+          {order.status === "orderin" && (
+            <Button
+              size={"lg"}
+              onClick={() => updateOrderStatsHandler("prepared")}
+            >
+              Prepared
+            </Button>
+          )}
           {order.status === "prepared" && (
-            <Button size={"lg"}>Delivered</Button>
+            <Button
+              size={"lg"}
+              onClick={() => updateOrderStatsHandler("delivered")}
+            >
+              Delivered
+            </Button>
           )}
           {order.status !== "delivered" && (
-            <Button size={"lg"} variant={"destructive"}>
+            <Button
+              size={"lg"}
+              variant={"destructive"}
+              onClick={() => updateOrderStatsHandler("reject")}
+            >
               Reject
             </Button>
           )}

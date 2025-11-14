@@ -14,6 +14,12 @@ import {
 import Razorpay from "razorpay";
 import { z } from "zod";
 import crypto from "crypto";
+import {
+  uploadFileOnCloudinary,
+  deleteFileOnCloudinary,
+} from "./utils/cloudinary";
+import { upload } from "./utils/multer";
+import { log } from "./vite";
 
 function configRazorPay() {
   const key_id = process.env.RAZORPAY_KEY_ID!;
@@ -26,7 +32,11 @@ function configRazorPay() {
   return { razorpay, key_id } as const;
 }
 
-export async function registerRoutes(app: Express, io: any): Promise<Server> {
+export async function registerRoutes(
+  app: Express,
+  io: any,
+  existingServer?: Server
+): Promise<Server> {
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -206,6 +216,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   });
 
   // Order routes
+  // create orders
   app.post("/api/orders", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
@@ -216,7 +227,10 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
 
       const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
 
-      console.log("Payment details:", paymentDetails);
+      log(
+        `Payment details fetched: ${JSON.stringify(paymentDetails)}`,
+        "routes"
+      );
 
       const orderSchema = insertOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true })),
@@ -231,6 +245,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
       });
 
       const order = await storage.createOrder(orderData, items);
+      io.emit("orderin", order);
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -266,13 +281,13 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   app.post("/api/payment", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const amount = z.string().parse(req.body.totalAmount);
+
       const { razorpay, key_id } = configRazorPay();
 
       const order = await razorpay.orders.create({
-        amount: parseFloat(amount) * 100,
+        amount: Math.round(parseFloat(amount) * 100), // amount in the smallest currency unit
         currency: "INR",
       });
-
       return res.status(200).json({ success: true, order, token: key_id });
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -280,6 +295,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   });
 
+  // payment verification endpoint (payment status update)
   app.post(
     "/api/payment/verify-payment",
     JWTAuth.authenticateToken,
@@ -294,8 +310,12 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
           .createHmac("sha256", process.env.RAZORPAY_APT_SECRET!)
           .update(body.toString())
           .digest("hex");
-
         if (expectedSignature === razorpay_signature) {
+          const order = await storage.getOrderUsingRazorPayID(
+            razorpay_order_id
+          );
+          io.emit("orderin", order);
+
           return res
             .status(200)
             .json({ success: true, message: "Payment verified successfully." });
@@ -423,7 +443,6 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     "/api/admin/orders/:orderstatus",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
-      console.log("Order status param:", req.params.orderstatus);
       try {
         const orders = await storage.getOrdersWithStatus(
           req.params.orderstatus as any
@@ -436,9 +455,9 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   );
 
-  // creatre new categories
+  // create new categories
   app.post(
-    "/api/categories",
+    "/api/admin/categories",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
@@ -458,7 +477,6 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
-        console.log("Here is the req id ", req.params.id);
         const category = await storage.getCategory(req.params.id);
         if (!category) {
           return res.status(404).json({ message: "Category not found" });
@@ -473,12 +491,11 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
 
   // update category by id
   app.patch(
-    "/api/categories/:id",
+    "/api/admin/categories/:id",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
         const id = req.params.id;
-        console.log("req body: ", req.body);
         const categoryData = insertCategorySchema
           .partial()
           .parse({ id, ...req.body });
@@ -506,7 +523,78 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   );
 
-  //
+  // delete category by id
+  app.delete(
+    "/api/admin/categories/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        await storage.deleteCategory(id);
+        res.json({ message: "Category deleted successfully" });
+      } catch (error) {
+        console.error("Error deleting category:", error);
+        res.status(500).json({ message: "Failed to delete category" });
+      }
+    }
+  );
+
+  // create new product
+  app.post(
+    "/api/admin/products",
+    upload.single("imageUrl"),
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const imageUrl = req.file?.path || null;
+
+        let cloudinaryResponse;
+        if (imageUrl) {
+          cloudinaryResponse = await uploadFileOnCloudinary(imageUrl);
+        }
+        const productData = insertProductSchema.parse({
+          ...req.body,
+          imageUrl: cloudinaryResponse?.secure_url || imageUrl,
+        });
+        const product = await storage.createProduct(productData);
+        res.json(product);
+      } catch (error) {
+        console.error("Error creating product:", error);
+        res.status(400).json({ message: "Failed to create product" });
+      }
+    }
+  );
+
+  // update product by id
+  app.patch(
+    "/api/admin/products/:id",
+    upload.single("imageUrl"),
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        const imageUrl = req.file?.path || null;
+
+        let cloudinaryResponse;
+        if (imageUrl) {
+          cloudinaryResponse = await uploadFileOnCloudinary(imageUrl);
+        }
+
+        const productData = insertProductSchema.partial().parse({
+          id,
+          ...req.body,
+          imageUrl: cloudinaryResponse?.secure_url || imageUrl,
+        });
+        const product = await storage.updateProduct(id, productData);
+        res.json(product);
+      } catch (error) {
+        console.error("Error updating product:", error);
+        res.status(400).json({ message: "Failed to update product" });
+      }
+    }
+  );
+
+  // get all products or by category
   app.get(
     "/api/admin/products",
     JWTAuth.authenticateAdminToken,
@@ -526,6 +614,60 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   );
 
-  const httpServer = createServer(app);
+  app.delete(
+    "/api/admin/products/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const id = req.params.id;
+        await storage.deleteProduct(id);
+        res.json({ message: "Product deleted successfully" });
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        res.status(500).json({ message: "Failed to delete product" });
+      }
+    }
+  );
+
+  app.post(
+    "/api/admin/new-payment",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const data = req.body;
+        log(`New payment data received: ${JSON.stringify(data)}`, "routes");
+
+        io.emit("orderin", data);
+        // Process the new payment data as needed
+        res
+          .status(200)
+          .json({ message: "New payment data received successfully" });
+      } catch (error) {
+        console.error("Error processing new payment data:", error);
+        res.status(500).json({ message: "Failed to process new payment data" });
+      }
+    }
+  );
+
+  app.patch(
+    "/api/admin/orders/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const orderStatus = z.string().parse(req.body.status);
+        const orderId = z.string().parse(req.params.id);
+
+        const order = await storage.updateOrderStatus(orderId, orderStatus);
+        return res.status(200).json(order);
+      } catch (error) {
+        console.error("Error on order status update:", error);
+        return res
+          .status(500)
+          .json({ message: "Failed to udpate order status" });
+      }
+    }
+  );
+
+  const httpServer = existingServer ?? createServer(app);
   return httpServer;
 }

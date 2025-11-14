@@ -90,7 +90,7 @@ export default function AdminCategoryAction() {
           : "Category Added successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
-      setLocation("/category", { replace: true });
+      setLocation("/admin/categories", { replace: true });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -112,78 +112,86 @@ export default function AdminCategoryAction() {
   };
 
   return (
-    <main className="mx-auto p-5">
-      <Card className="px-4 pb-4">
+    <main className="mx-auto p-5 max-w-3xl">
+      <Card className="px-4 pb-4 max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>Category Information</CardTitle>
         </CardHeader>
         <CardContent className="bg-white p-4 rounded-md">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        className="border border-slate-300"
-                        placeholder="Enter Category name"
-                        data-testid="input-category-name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Category Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          className="border border-slate-300"
+                          placeholder="Enter Category name"
+                          data-testid="input-category-name"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        className="border border-slate-300"
-                        placeholder="Enter Category description"
-                        rows={3}
-                        data-testid="input-category-description"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2">
-                    <FormLabel className="mt-2">Category is Active?</FormLabel>
-                    <FormControl>
-                      <Checkbox
-                        checked={!!field.value}
-                        onCheckedChange={(checked) => field.onChange(checked)}
-                        className="size-6"
-                        data-testid="input-category-isActive"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-                data-testid="button-place-order"
-              >
-                {isEdit ? "Edit Category" : "Create new Category"}
-              </Button>
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1 flex items-center gap-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={!!field.value}
+                          onCheckedChange={(checked) => field.onChange(checked)}
+                          className="size-6"
+                          data-testid="input-category-isActive"
+                        />
+                      </FormControl>
+                      <div>
+                        <FormLabel className="mt-0 mb-3 block">Active</FormLabel>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-3">
+                      <FormLabel>Category Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="border border-slate-300"
+                          placeholder="Enter Category description"
+                          rows={4}
+                          data-testid="input-category-description"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  className="w-full md:w-48"
+                  disabled={isLoading}
+                  data-testid="button-place-order"
+                >
+                  {isEdit ? "Edit Category" : "Create new Category"}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>

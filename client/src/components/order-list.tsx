@@ -5,26 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 const OrdersList = ({
-  listtype,
+  orders,
+  isLoading,
+  isError,
   setOrderid,
 }: {
-  listtype: string;
+  orders: Order[];
+  isLoading: Boolean;
+  isError: Boolean;
   setOrderid: (orderid: string) => void;
 }) => {
-  const {
-    data: orders,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery<Order[]>({
-    queryKey: ["/api/admin/orders", listtype],
-    enabled: false,
-  });
-
-  useEffect(() => {
-    refetch();
-  }, [listtype]);
-
   if (isLoading) {
     return [...Array(8)].map((_, index) => (
       <div
@@ -44,7 +34,7 @@ const OrdersList = ({
   }
 
   return (
-    <div className="flex flex-col mt-2 gap-y-4 break-words overflow-y-auto max-h-screen pr-3">
+    <div className="flex flex-col mt-2 gap-y-4 break-words pr-3">
       {orders?.length !== 0 &&
         orders?.map((order) => (
           <div

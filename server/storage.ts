@@ -334,6 +334,15 @@ export class DatabaseStorage implements IStorage {
     return updatedOrder;
   }
 
+  async updateOrderPaymentStatus(id: string, status: string): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ paymentStatus: status, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+    return updatedOrder;
+  }
+
   async getAllorders(): Promise<Order[]> {
     return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
@@ -355,14 +364,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCategories(): Promise<Category[]> {
-    return await db.select().from(categories).orderBy(desc(categories.createdAt));
+    return await db
+      .select()
+      .from(categories)
+      .orderBy(desc(categories.createdAt));
+  }
+
+  async getOrderUsingRazorPayID(razorpay_order_id: string): Promise<Order | undefined> {
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.paymentId, razorpay_order_id));
+    return order;
   }
 
   async getCategory(id: string): Promise<Category | undefined> {
-    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, id));
     return category;
   }
-  async updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category> {
+  async updateCategory(
+    id: string,
+    category: Partial<InsertCategory>
+  ): Promise<Category> {
     const [updatedCategory] = await db
       .update(categories)
       .set({ ...category, updatedAt: new Date() })
@@ -385,6 +411,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllProducts(): Promise<Product[]> {
     return await db.select().from(products);
+  }
+
+  async deleteCategory(id: string) {
+    return await db.delete(categories).where(eq(categories.id, id)).returning();
   }
 }
 
