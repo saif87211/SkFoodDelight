@@ -32,7 +32,11 @@ function configRazorPay() {
   return { razorpay, key_id } as const;
 }
 
-export async function registerRoutes(app: Express, io: any): Promise<Server> {
+export async function registerRoutes(
+  app: Express,
+  io: any,
+  existingServer?: Server
+): Promise<Server> {
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -212,6 +216,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
   });
 
   // Order routes
+  // create orders
   app.post("/api/orders", JWTAuth.authenticateToken, async (req: any, res) => {
     try {
       const userId = req.user.userId;
@@ -240,6 +245,7 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
       });
 
       const order = await storage.createOrder(orderData, items);
+      io.emit("orderin", order);
       res.json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -305,7 +311,6 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
           .update(body.toString())
           .digest("hex");
         if (expectedSignature === razorpay_signature) {
-          
           const order = await storage.getOrderUsingRazorPayID(
             razorpay_order_id
           );
@@ -644,6 +649,25 @@ export async function registerRoutes(app: Express, io: any): Promise<Server> {
     }
   );
 
-  const httpServer = createServer(app);
+  app.patch(
+    "/api/admin/orders/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const orderStatus = z.string().parse(req.body.status);
+        const orderId = z.string().parse(req.params.id);
+
+        const order = await storage.updateOrderStatus(orderId, orderStatus);
+        return res.status(200).json(order);
+      } catch (error) {
+        console.error("Error on order status update:", error);
+        return res
+          .status(500)
+          .json({ message: "Failed to udpate order status" });
+      }
+    }
+  );
+
+  const httpServer = existingServer ?? createServer(app);
   return httpServer;
 }

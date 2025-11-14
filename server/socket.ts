@@ -1,33 +1,15 @@
-import http from "http";
-import { Server } from "socket.io";
+import { Server as HttpServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
 
-export const socketEvents = {
-  CONNECTION: "connection",
-  DISCONNECT: "disconnect",
-  ORDER_PREPARED: "order_prepared",
-  ORDER_DELIVERED: "order_delivered",
-  ORDER_INCOMING: "order_incoming",
-};
+export function initializeSocket(httpServer: HttpServer) {
+  const io = new SocketIOServer(httpServer);
 
-export function intializeSocket(app: any) {
-  const httpServer = http.createServer(app);
-  const io = new Server(httpServer, {
-    pingTimeout: 60000,
-  });
+  io.on("connection", (socket) => {
+    socket.send("hello");
+    console.log(`Socket connected: ${socket.id}`);
 
-  io.on(socketEvents.CONNECTION, (socket) => {
-    console.log("New client connected");
-
-    socket.on(socketEvents.ORDER_PREPARED, (orderid: string) => {
-      console.log("Order prepared:", orderid);
-    });
-
-    socket.on(socketEvents.ORDER_DELIVERED, (orderid: string) => {
-      console.log("Order delivered:", orderid);
-    });
-
-    socket.on(socketEvents.DISCONNECT, () => {
-      console.log("Client disconnected");
+    socket.on("disconnect", () => {
+      console.log(`Socket disconnected: ${socket.id}`);
     });
   });
 

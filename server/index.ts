@@ -2,39 +2,13 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import http from "http";
-import { Server } from "socket.io";
-import { JWTAuth } from "./auth/jwt-auth";
-import { storage } from "./storage";
+import { initializeSocket } from "./socket";
+import { json } from "stream/consumers";
 
 const app = express();
 
-const socketServer = http.createServer(app);
-
-const io = new Server(socketServer, {
-  pingTimeout: 60000,
-});
-
-io.on("connection", async (socket) => {
-  const token = socket.handshake.auth?.token;
-
-  if (!token) {
-    // Token is required for the socket to work
-    throw new Error("Un-authorized handshake. Token is missing");
-  }
-  const decodedToken = JWTAuth.verifyToken(token);
-
-  const user = await storage.getUser(decodedToken?.userId || "");
-
-  if (!user) {
-    throw new Error("Invalid Access Token.");
-  }
-
-  log(`Socket connected: ${socket.id}`);
-
-  socket.on("disconnect", () => {
-    log(`Socket disconnected: ${socket.id}`);
-  });
-});
+const server = http.createServer(app);
+const io = initializeSocket(server);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -70,7 +44,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app, io);
+  await registerRoutes(app, io, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

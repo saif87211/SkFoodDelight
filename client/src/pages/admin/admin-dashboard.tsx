@@ -2,11 +2,55 @@ import OrdersList from "@/components/order-list";
 import OrderDetails from "@/components/order-details";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import { useQuery } from "@tanstack/react-query";
+import { Order } from "@shared/schema";
+import { queryClient } from "@/lib/queryClient";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("orderin");
   const [orderid, setOrderid] = useState<string | null>(null);
+  const {
+    data: orders,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<Order[]>({
+    queryKey: ["/api/admin/orders", activeTab],
+  });
+
+  useEffect(() => {
+    refetch();
+  }, [activeTab, refetch]);
+
+  const socket = io();
+
+  useEffect(() => {
+    socket.connect();
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+    });
+
+    socket.on("orderin", (newOrder: Order) => {
+      queryClient.setQueryData(
+        ["/api/admin/orders", activeTab],
+        (oldData: Order[] | undefined) => {
+          if (oldData) return [newOrder, ...oldData];
+          else return [newOrder];
+        }
+      );
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [queryClient]);
 
   return (
     <main className="max-w-full px-4 py-4">
@@ -15,7 +59,11 @@ const AdminDashboard = () => {
         <div className="w-full lg:w-1/3">
           <Card className="min-w-full">
             <CardContent className="p-3">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
                 {/* Tabs: on small screens allow horizontal scrolling */}
                 <div className="mb-3 -mx-2">
                   <TabsList className="inline-flex gap-2 px-2 w-full overflow-x-auto whitespace-nowrap">
@@ -45,13 +93,28 @@ const AdminDashboard = () => {
 
                 <div className="h-[60vh] lg:h-[72vh] overflow-y-auto">
                   <TabsContent value="orderin" className="p-0">
-                    <OrdersList listtype={activeTab} setOrderid={setOrderid} />
+                    <OrdersList
+                      orders={orders!}
+                      isError={isError}
+                      isLoading={isLoading}
+                      setOrderid={setOrderid}
+                    />
                   </TabsContent>
                   <TabsContent value="prepared" className="p-0">
-                    <OrdersList listtype={activeTab} setOrderid={setOrderid} />
+                    <OrdersList
+                      orders={orders!}
+                      isError={isError}
+                      isLoading={isLoading}
+                      setOrderid={setOrderid}
+                    />
                   </TabsContent>
                   <TabsContent value="delivered" className="p-0">
-                    <OrdersList listtype={activeTab} setOrderid={setOrderid} />
+                    <OrdersList
+                      orders={orders!}
+                      isError={isError}
+                      isLoading={isLoading}
+                      setOrderid={setOrderid}
+                    />
                   </TabsContent>
                 </div>
               </Tabs>

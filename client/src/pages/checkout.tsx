@@ -141,7 +141,7 @@ export default function Checkout() {
         currency: "INR",
         name: "SkFoodDelight",
         order_id: data.order.id,
-        callback_url: "/api/payment/verify-payment",
+        // callback_url: "/api/payment/verify-payment",
         handler: handlePaymentSuccess,
       };
 
