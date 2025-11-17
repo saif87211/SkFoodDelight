@@ -440,13 +440,12 @@ export async function registerRoutes(
 
   // get orders by status
   app.get(
-    "/api/admin/orders/:orderstatus",
+    "/api/admin/orders",
     JWTAuth.authenticateAdminToken,
     async (req, res) => {
       try {
-        const orders = await storage.getOrdersWithStatus(
-          req.params.orderstatus as any
-        );
+        const orderStatus = z.string().parse(req.query.status);
+        const orders = await storage.getOrdersWithStatus(orderStatus);
         return res.json(orders);
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -603,8 +602,8 @@ export async function registerRoutes(
         const { category } = req.query;
         const products = category
           ? await storage.getAllProductsByCategory({
-              categoryId: category as string,
-            })
+            categoryId: category as string,
+          })
           : await storage.getAllProducts();
         res.json(products);
       } catch (error) {
@@ -629,26 +628,7 @@ export async function registerRoutes(
     }
   );
 
-  app.post(
-    "/api/admin/new-payment",
-    JWTAuth.authenticateAdminToken,
-    async (req, res) => {
-      try {
-        const data = req.body;
-        log(`New payment data received: ${JSON.stringify(data)}`, "routes");
-
-        io.emit("orderin", data);
-        // Process the new payment data as needed
-        res
-          .status(200)
-          .json({ message: "New payment data received successfully" });
-      } catch (error) {
-        console.error("Error processing new payment data:", error);
-        res.status(500).json({ message: "Failed to process new payment data" });
-      }
-    }
-  );
-
+  // update order status by id
   app.patch(
     "/api/admin/orders/:id",
     JWTAuth.authenticateAdminToken,
@@ -667,6 +647,35 @@ export async function registerRoutes(
       }
     }
   );
+
+  app.get("/api/admin/orders/:id", JWTAuth.authenticateAdminToken, async (req, res) => {
+    try {
+      const orderId = z.string().parse(req.params.id);
+
+      const order = await storage.getOrder(orderId);
+
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const userThatOrderd = await storage.getUser(order?.userId);
+
+      return res.status(200).json({
+        order,
+        user: {
+          id: userThatOrderd?.id,
+          firstName: userThatOrderd?.firstName,
+          lastName: userThatOrderd?.lastName,
+          email: userThatOrderd?.email,
+          profileImageUrl: userThatOrderd?.profileImageUrl
+        }
+      });
+
+    } catch (error) {
+      console.log("Error while getting order by id: ", error);
+      return res.status(500).json({ message: "Error while getting order data" });
+    }
+  });
 
   const httpServer = existingServer ?? createServer(app);
   return httpServer;

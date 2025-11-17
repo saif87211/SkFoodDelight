@@ -1,8 +1,8 @@
 import { type Order } from "@shared/schema";
 import { Button } from "./ui/button";
+// @ts-ignore TS7016: Could not find a declaration file for module 'lucide-react'.
 import { ChevronRight, ListTodo } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { Badge } from "./ui/badge";
 
 const OrdersList = ({
   orders,
@@ -19,7 +19,7 @@ const OrdersList = ({
     return [...Array(8)].map((_, index) => (
       <div
         key={index}
-        className="flex justify-between items-center border border-slate-300 rounded-lg py-5 px-6 mb-3"
+        className="flex justify-between items-center border border-slate-300 rounded-lg py-5 px-6 mb-3 mr-3"
       >
         <div className="animate-pulse">
           <div className="h-7 w-56 bg-gray-200 rounded-sm dark:bg-gray-800 mb-2"></div>

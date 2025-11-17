@@ -2,7 +2,7 @@ import OrdersList from "@/components/order-list";
 import OrderDetails from "@/components/order-details";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { useQuery } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
@@ -17,30 +17,35 @@ const AdminDashboard = () => {
     isError,
     refetch,
   } = useQuery<Order[]>({
-    queryKey: ["/api/admin/orders", activeTab],
+    queryKey: ["/api/admin", `orders?status=${activeTab}`],
   });
+
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
     refetch();
+    setOrderid(null);
   }, [activeTab, refetch]);
 
-  const socket = io();
-
   useEffect(() => {
-    socket.connect();
+    const socket = io();
+    socketRef.current = socket;
 
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
     });
 
     socket.on("orderin", (newOrder: Order) => {
-      queryClient.setQueryData(
-        ["/api/admin/orders", activeTab],
-        (oldData: Order[] | undefined) => {
-          if (oldData) return [newOrder, ...oldData];
-          else return [newOrder];
-        }
-      );
+      queryClient.invalidateQueries({
+        queryKey: ["/api/admin", `orders?status=${activeTab}`],
+      });
+      // queryClient.setQueryData(
+      //   ["/api/admin", `orders?status=${activeTab}`],
+      //   (oldData: Order[] | undefined) => {
+      //     if (oldData) return [newOrder, ...oldData];
+      //     else return [newOrder];
+      //   }
+      // );
     });
 
     socket.on("disconnect", () => {
@@ -48,7 +53,7 @@ const AdminDashboard = () => {
     });
 
     return () => {
-      socket.disconnect();
+      socketRef.current && socketRef.current.disconnect();
     };
   }, [queryClient]);
 
@@ -130,7 +135,7 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <div className="min-h-[40vh] lg:min-h-[72vh]">
-                <OrderDetails orderid={orderid} />
+                <OrderDetails orderid={orderid} activeTab={activeTab} />
               </div>
             </CardContent>
           </Card>

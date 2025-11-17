@@ -1,8 +1,9 @@
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+// @ts-ignore TS7016: Could not find a declaration file for module 'lucide-react'.
 import { Contact, MapPin } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Order, OrderItem, Product } from "@shared/schema";
+import { Order, OrderItem, Product, User } from "@shared/schema";
 import { Button } from "./ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -10,19 +11,21 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function OrderDetails({
   orderid: id,
+  activeTab,
 }: {
   orderid: string | null;
+  activeTab: string;
 }) {
-  const {
-    data: order,
-    isLoading,
-    isError,
-  } = useQuery<Order & { orderItems: (OrderItem & { product: Product })[] }>({
-    queryKey: ["/api/orders", id],
+  const { data, isLoading, isError } = useQuery<{
+    order: Order & { orderItems: (OrderItem & { product: Product })[] };
+    user: User;
+  }>({
+    queryKey: ["/api/admin/orders", id],
     retry: false,
     enabled: !!id,
   });
-
+  const order = data?.order;
+  const user = data?.user;
   const { toast } = useToast();
 
   const updateOrderStatusMutation = useMutation({
@@ -39,7 +42,10 @@ export default function OrderDetails({
     onSuccess: (data) => {
       // Invalidate and refetch
       queryClient.invalidateQueries({
-        queryKey: ["/api/admin/orders", data.status],
+        queryKey: ["/api/admin", `orders?status=${activeTab}`],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/admin/orders", id],
       });
       toast({
         title: "Order Updated",
@@ -118,13 +124,18 @@ export default function OrderDetails({
           </div>
           <div className="flex mb-4">
             <img
-              src="https://fooddesk-vite.vercel.app/assets/pic-1-CSKj1ibQ.jpg"
+              src={
+                user?.profileImageUrl ||
+                `https://avatar.iran.liara.run/username?username=${user?.firstName}+${user?.lastName}`
+              }
               className="size-12 object-cover rounded-lg mr-2"
-              alt="User"
+              alt={user?.firstName + " " + user?.lastName}
             ></img>
             <div>
-              <h6 className="text-sm font-bold">Ruby Roben</h6>
-              <span className="text-slate-500">User</span>
+              <h6 className="text-sm font-bold">
+                {user?.firstName + " " + user?.lastName}
+              </h6>
+              <span className="text-slate-500 text-sm">{user?.email}</span>
             </div>
           </div>
         </div>
@@ -211,7 +222,7 @@ export default function OrderDetails({
               Delivered
             </Button>
           )}
-          {order.status !== "delivered" && (
+          {order.status == "orderin" && (
             <Button
               size={"lg"}
               variant={"destructive"}
@@ -220,6 +231,12 @@ export default function OrderDetails({
               Reject
             </Button>
           )}
+          <Button
+            size={"lg"}
+            onClick={() => updateOrderStatsHandler("orderin")}
+          >
+            Orderin
+          </Button>
         </div>
       </CardContent>
     </Card>

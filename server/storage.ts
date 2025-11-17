@@ -26,13 +26,6 @@ import { eq, and, desc, getTableColumns } from "drizzle-orm";
 
 type UserWithoutPassword = Omit<User, "password">;
 type CategoryWithProducts = Category & { products: Product[] };
-type OrdersStatus =
-  | "pending"
-  | "confirmed"
-  | "prepared"
-  | "out_for_delivery"
-  | "delivered"
-  | "cancelled";
 
 export interface IStorage {
   // User operations for JWT Auth
@@ -355,7 +348,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(orders.userId, users.id))
       .orderBy(desc(orders.createdAt));
   }
-  async getOrdersWithStatus(status: OrdersStatus): Promise<Order[]> {
+  async getOrdersWithStatus(status: string): Promise<Order[]> {
     return await db
       .select()
       .from(orders)
