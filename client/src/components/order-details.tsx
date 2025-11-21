@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export default function OrderDetails({
   orderid: id,
@@ -16,16 +17,24 @@ export default function OrderDetails({
   orderid: string | null;
   activeTab: string;
 }) {
-  const { data, isLoading, isError } = useQuery<{
-    order: Order & { orderItems: (OrderItem & { product: Product })[] };
-    user: User;
-  }>({
+  const {
+    data: order,
+    isLoading,
+    isError,
+  } = useQuery<
+    Order & {
+      orderItems: (OrderItem & { product: Product })[];
+      user?: Pick<
+        User,
+        "id" | "firstName" | "lastName" | "email" | "profileImageUrl"
+      >;
+    }
+  >({
     queryKey: ["/api/admin/orders", id],
     retry: false,
     enabled: !!id,
   });
-  const order = data?.order;
-  const user = data?.user;
+
   const { toast } = useToast();
 
   const updateOrderStatusMutation = useMutation({
@@ -76,6 +85,22 @@ export default function OrderDetails({
     updateOrderStatusMutation.mutate(status);
   };
 
+  useEffect(() => {
+    if (order?.acknowledgedAt && order.id) {
+      queryClient.setQueryData<Order[]>(
+        ["/api/admin", `orders?status=${activeTab}`],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.map((o) =>
+            o.id === order.id
+              ? { ...o, acknowledgedAt: order.acknowledgedAt }
+              : o
+          );
+        }
+      );
+    }
+  }, [order?.acknowledgedAt, order?.id, activeTab]);
+
   if (isLoading) {
     return (
       <Card>
@@ -125,17 +150,19 @@ export default function OrderDetails({
           <div className="flex mb-4">
             <img
               src={
-                user?.profileImageUrl ||
-                `https://avatar.iran.liara.run/username?username=${user?.firstName}+${user?.lastName}`
+                order.user?.profileImageUrl ||
+                `https://avatar.iran.liara.run/username?username=${order.user?.firstName}+${order.user?.lastName}`
               }
               className="size-12 object-cover rounded-lg mr-2"
-              alt={user?.firstName + " " + user?.lastName}
+              alt={order.user?.firstName + " " + order.user?.lastName}
             ></img>
             <div>
               <h6 className="text-sm font-bold">
-                {user?.firstName + " " + user?.lastName}
+                {order.user?.firstName + " " + order.user?.lastName}
               </h6>
-              <span className="text-slate-500 text-sm">{user?.email}</span>
+              <span className="text-slate-500 text-sm">
+                {order.user?.email}
+              </span>
             </div>
           </div>
         </div>

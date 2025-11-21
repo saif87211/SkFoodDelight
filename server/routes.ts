@@ -438,22 +438,6 @@ export async function registerRoutes(
     }
   );
 
-  // get orders by status
-  app.get(
-    "/api/admin/orders",
-    JWTAuth.authenticateAdminToken,
-    async (req, res) => {
-      try {
-        const orderStatus = z.string().parse(req.query.status);
-        const orders = await storage.getOrdersWithStatus(orderStatus);
-        return res.json(orders);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        return res.status(500).json({ message: "Failed to fetch orders" });
-      }
-    }
-  );
-
   // create new categories
   app.post(
     "/api/admin/categories",
@@ -602,8 +586,8 @@ export async function registerRoutes(
         const { category } = req.query;
         const products = category
           ? await storage.getAllProductsByCategory({
-            categoryId: category as string,
-          })
+              categoryId: category as string,
+            })
           : await storage.getAllProducts();
         res.json(products);
       } catch (error) {
@@ -648,34 +632,44 @@ export async function registerRoutes(
     }
   );
 
-  app.get("/api/admin/orders/:id", JWTAuth.authenticateAdminToken, async (req, res) => {
-    try {
-      const orderId = z.string().parse(req.params.id);
-
-      const order = await storage.getOrder(orderId);
-
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      const userThatOrderd = await storage.getUser(order?.userId);
-
-      return res.status(200).json({
-        order,
-        user: {
-          id: userThatOrderd?.id,
-          firstName: userThatOrderd?.firstName,
-          lastName: userThatOrderd?.lastName,
-          email: userThatOrderd?.email,
-          profileImageUrl: userThatOrderd?.profileImageUrl
+  // get order by id
+  app.get(
+    "/api/admin/orders/:id",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const orderId = z.string().parse(req.params.id);
+        
+        const order = await storage.getOrderWithUser(orderId);
+        
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
         }
-      });
-
-    } catch (error) {
-      console.log("Error while getting order by id: ", error);
-      return res.status(500).json({ message: "Error while getting order data" });
+        return res.json(order);
+      } catch (error) {
+        console.log("Error while getting order by id: ", error);
+        return res
+          .status(500)
+          .json({ message: "Error while getting order data" });
+      }
     }
-  });
+  );
+
+  // get orders by status
+  app.get(
+    "/api/admin/orders",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const orderStatus = z.string().parse(req.query.status);
+        const orders = await storage.getOrdersWithStatus(orderStatus);
+        return res.json(orders);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        return res.status(500).json({ message: "Failed to fetch orders" });
+      }
+    }
+  );
 
   const httpServer = existingServer ?? createServer(app);
   return httpServer;

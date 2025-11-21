@@ -23,6 +23,8 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, getTableColumns } from "drizzle-orm";
+import { datetime } from "drizzle-orm/mysql-core";
+import { any } from "zod";
 
 type UserWithoutPassword = Omit<User, "password">;
 type CategoryWithProducts = Category & { products: Product[] };
@@ -363,7 +365,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(categories.createdAt));
   }
 
-  async getOrderUsingRazorPayID(razorpay_order_id: string): Promise<Order | undefined> {
+  async getOrderUsingRazorPayID(
+    razorpay_order_id: string
+  ): Promise<Order | undefined> {
     const [order] = await db
       .select()
       .from(orders)
@@ -408,6 +412,63 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCategory(id: string) {
     return await db.delete(categories).where(eq(categories.id, id)).returning();
+  }
+
+  async getOrderWithUser(id: string): Promise<
+    | (Order & {
+        orderItems: (OrderItem & { product: Product })[];
+        user?: Pick<
+          User,
+          "id" | "firstName" | "lastName" | "email" | "profileImageUrl"
+        >;
+      })
+    | undefined
+  > {
+    const [order, items] = await Promise.all([
+      db.query.orders.findFirst({ where: eq(orders.id, id) }),
+      db
+        .select({
+          id: orderItems.id,
+          orderId: orderItems.orderId,
+          productId: orderItems.productId,
+          quantity: orderItems.quantity,
+          price: orderItems.price,
+          productName: orderItems.productName,
+          product: products, // Selects all columns from the products table
+        })
+        .from(orderItems)
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .where(eq(orderItems.orderId, id)),
+    ]);
+
+    if (!order) return undefined;
+
+    const [fetchedUser] = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(users)
+      .where(eq(users.id, order.userId));
+
+    let finalOrder = order;
+
+    if (!order.acknowledgedAt) {
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({ acknowledgedAt: new Date(), updatedAt: new Date() })
+        .where(eq(orders.id, id))
+        .returning();
+
+      if (updatedOrder) {
+        finalOrder = updatedOrder;
+      }
+    }
+
+    return { ...finalOrder, orderItems: items, user: fetchedUser };
   }
 }
 
