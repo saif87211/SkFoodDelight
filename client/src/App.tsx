@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminAuth } from "@/hooks/useAdminAuth"; // Import the admin auth hook
 import AuthPage from "@/pages/admin/auth-page";
 import AdminAuth from "@/pages/admin/admin-auth";
-import AdminDashboard from "@/pages/admin/admin-dashboard";
+import AdminLiveOrders from "@/pages/admin/admin-live-orders";
 import Home from "@/pages/home";
 import ProductDetail from "@/pages/product-detail";
 import Cart from "@/pages/cart";
@@ -21,6 +21,8 @@ import AdminCategoryList from "./pages/admin/admin-category-list";
 import AdminProductAction from "./pages/admin/admin-product-action";
 import AdminCategoryAction from "./pages/admin/admin-category-action";
 import AdminProductList from "./pages/admin/admin-product-list";
+import AdminOrderList from "./pages/admin/admin-order-list";
+import Invoice from "./pages/admin/invocie";
 
 type RouteObject = {
   path: string;
@@ -33,8 +35,8 @@ document.body.appendChild(script);
 
 const secureAdminRoutes: RouteObject[] = [
   {
-    path: "/admin/dashboard",
-    component: <AdminDashboard />,
+    path: "/admin/admin-live-orders",
+    component: <AdminLiveOrders />,
   },
   {
     path: "/admin/categories",
@@ -59,6 +61,14 @@ const secureAdminRoutes: RouteObject[] = [
   {
     path: "/admin/product-action/:id",
     component: <AdminProductAction />,
+  },
+  {
+    path: "/admin/orders-list",
+    component:<AdminOrderList />,
+  },
+  {
+    path: "/admin/invocie/:id",
+    component:<Invoice />,
   },
 ];
 

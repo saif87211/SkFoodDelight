@@ -639,9 +639,9 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const orderId = z.string().parse(req.params.id);
-        
+
         const order = await storage.getOrderWithUser(orderId);
-        
+
         if (!order) {
           return res.status(404).json({ message: "Order not found" });
         }
@@ -663,6 +663,20 @@ export async function registerRoutes(
       try {
         const orderStatus = z.string().parse(req.query.status);
         const orders = await storage.getOrdersWithStatus(orderStatus);
+        return res.json(orders);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        return res.status(500).json({ message: "Failed to fetch orders" });
+      }
+    }
+  );
+
+  app.get(
+    "/api/admin/orders-all",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const orders = await storage.getAllOrdersWithItemsAndUsers();
         return res.json(orders);
       } catch (error) {
         console.error("Error fetching orders:", error);

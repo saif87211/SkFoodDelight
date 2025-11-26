@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 
-const AdminDashboard = () => {
+export default function AdminLiveOrders() {
   const [activeTab, setActiveTab] = useState("orderin");
   const [orderid, setOrderid] = useState<string | null>(null);
   const {
@@ -144,5 +144,3 @@ const AdminDashboard = () => {
     </main>
   );
 };
-
-export default AdminDashboard;

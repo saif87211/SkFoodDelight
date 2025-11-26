@@ -470,6 +470,70 @@ export class DatabaseStorage implements IStorage {
 
     return { ...finalOrder, orderItems: items, user: fetchedUser };
   }
+
+  async getAllOrdersWithItemsAndUsers() {
+    // Select orders and their user in one query, then fetch order items for
+    // each order (joined with product) to compose the full payload.
+    const rows = await db
+      .select({
+        order: {
+          id: orders.id,
+          userid: orders.userId,
+          status: orders.status,
+          paymentStatus: orders.paymentStatus,
+          paymentMethod: orders.paymentMethod,
+          acknowledgedAt: orders.acknowledgedAt,
+          createdAt: orders.createdAt,
+          customerName: orders.customerName,
+          customerPhone: orders.customerPhone,
+          deliveryAddress: orders.deliveryAddress,
+          isDeliveredAt: orders.isDeliveredAt,
+          totalAmount: orders.totalAmount,
+          tax: orders.tax,
+          deliveryFee: orders.deliveryFee,
+        },
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+        },
+      })
+      .from(orders)
+      .leftJoin(users, eq(orders.userId, users.id))
+      .orderBy(desc(orders.createdAt));
+
+    // rows will be objects like { order: Order, user: User | null }
+    const ordersList = rows.map((r: any) => r.order as Order);
+
+    const ordersWithItems = await Promise.all(
+      ordersList.map(async (order) => {
+        const items = await db
+          .select({
+            id: orderItems.id,
+            orderId: orderItems.orderId,
+            productId: orderItems.productId,
+            quantity: orderItems.quantity,
+            price: orderItems.price,
+            productName: orderItems.productName,
+          })
+          .from(orderItems)
+          .where(eq(orderItems.orderId, order.id));
+
+        return { ...order, orderItems: items };
+      })
+    );
+
+    // Attach users to the corresponding orders from the earlier join
+    const userMap = new Map<string, User | undefined>();
+    for (const r of rows as any[]) {
+      const o = r.order as Order;
+      userMap.set(o.id, r.user || undefined);
+    }
+
+    return ordersWithItems.map((o) => ({ ...o, user: userMap.get(o.id) }));
+  }
 }
 
 export const storage = new DatabaseStorage();

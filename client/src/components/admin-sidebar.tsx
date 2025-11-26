@@ -31,7 +31,8 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
       icon: LayoutGrid,
       routes: [
         { name: "Dashboard", path: "/admin/dashboard" },
-        { name: "Bills", path: "/admin/bills" },
+        { name: "Live orders", path: "/admin/orders-live-orders" },
+        { name: "Orders-List", path: "/admin/orders-list" },
       ],
     },
     {
