@@ -23,6 +23,7 @@ import AdminCategoryAction from "./pages/admin/admin-category-action";
 import AdminProductList from "./pages/admin/admin-product-list";
 import AdminOrderList from "./pages/admin/admin-order-list";
 import Invoice from "./pages/admin/invocie";
+import AdminDashBoard from "./pages/admin/admin-dashboard";
 
 type RouteObject = {
   path: string;
@@ -35,8 +36,12 @@ document.body.appendChild(script);
 
 const secureAdminRoutes: RouteObject[] = [
   {
-    path: "/admin/admin-live-orders",
+    path: "/admin/live-orders",
     component: <AdminLiveOrders />,
+  },
+  {
+    path: "/admin/dashboard",
+    component: <AdminDashBoard />,
   },
   {
     path: "/admin/categories",
@@ -64,11 +69,11 @@ const secureAdminRoutes: RouteObject[] = [
   },
   {
     path: "/admin/orders-list",
-    component:<AdminOrderList />,
+    component: <AdminOrderList />,
   },
   {
-    path: "/admin/invocie/:id",
-    component:<Invoice />,
+    path: "/admin/invoice/:id",
+    component: <Invoice />,
   },
 ];
 

@@ -13,7 +13,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     setIsSidebarOpen(!isSidebarOpen);
   };
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <AdminHeader onSidebarToggle={toggleSidebar} />
       <div className="flex">
         <AdminSidebar isOpen={isSidebarOpen} onClose={toggleSidebar} />

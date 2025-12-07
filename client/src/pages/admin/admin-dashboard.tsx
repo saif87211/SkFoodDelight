@@ -1,0 +1,229 @@
+"use client";
+
+import React from "react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RTooltip,
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+} from "recharts";
+// @ts-ignore TS7016: Could not find a declaration file for module 'lucide-react'.
+import { ShoppingCart, DollarSign, Package, Activity } from "lucide-react";
+
+const revenueData = [
+  { day: "Mon", revenue: 120, orders: 8 },
+  { day: "Tue", revenue: 220, orders: 14 },
+  { day: "Wed", revenue: 150, orders: 10 },
+  { day: "Thu", revenue: 260, orders: 18 },
+  { day: "Fri", revenue: 200, orders: 12 },
+  { day: "Sat", revenue: 320, orders: 22 },
+  { day: "Sun", revenue: 280, orders: 20 },
+];
+
+const pieData = [
+  { name: "Delivered", value: 60 },
+  { name: "Pending", value: 25 },
+  { name: "Canceled", value: 15 },
+];
+
+const COLORS = ["#06b6d4", "#60a5fa", "#f97316"];
+
+const topItems = [
+  { name: "Margherita Pizza", units: 124 },
+  { name: "Veggie Burger", units: 98 },
+  { name: "Chocolate Donut", units: 76 },
+  { name: "Caesar Salad", units: 58 },
+  { name: "Lemonade", units: 45 },
+];
+
+export default function AdminDashBoard() {
+  return (
+    <div className="space-y-4">
+      {/* Top stats row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="flex items-center justify-between p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-sky-50 text-sky-600">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-medium">Restaurant Online</div>
+              <div className="text-xs text-muted-foreground">
+                Accepting orders
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch className="border border-slate-200" defaultChecked />
+          </div>
+        </Card>
+
+        <Card className="p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Live / Pending orders</div>
+              <div className="text-2xl font-bold">5</div>
+            </div>
+            <div className="p-2 rounded-md bg-rose-50 text-rose-600">
+              <ShoppingCart className="w-6 h-6" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Total Revenue (Today)</div>
+              <div className="text-2xl font-bold">
+                $1,240 <span className="text-sm text-success">(↑ 5.4%)</span>
+              </div>
+            </div>
+            <div className="p-2 rounded-md bg-emerald-50 text-emerald-600">
+              <DollarSign className="w-6 h-6" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Total Orders (Today)</div>
+              <div className="text-2xl font-bold">
+                2{" "}
+                <span className="text-xs text-muted-foreground">
+                  (completed)
+                </span>
+              </div>
+            </div>
+            <div className="p-2 rounded-md bg-violet-50 text-violet-600">
+              <Package className="w-6 h-6" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Main content grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-8">
+          <Card className="h-full hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle>Revenue vs. Order Count</CardTitle>
+              <CardDescription>Last 7 days performance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={revenueData}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <RTooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#06b6d4"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="orders"
+                      stroke="#60a5fa"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-4">
+          <Card className="h-full hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle>Orders Breakdown (24h)</CardTitle>
+              <CardDescription>Delivered, Canceled, Pending</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <RTooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Lower row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle>Top 5 Most Popular Items</CardTitle>
+            <CardDescription>
+              Item name and units sold in the last 7 days
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {topItems.map((it, idx) => (
+                <li key={it.name} className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">
+                      {idx + 1}. {it.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Units sold: {it.units}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold">{it.units}</div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card className="min-h-[220px] flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            No idea what to show here — add widgets as needed
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

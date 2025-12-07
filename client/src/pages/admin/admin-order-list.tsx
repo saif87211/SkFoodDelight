@@ -5,6 +5,7 @@ import {
   Clock,
   Package,
   ChevronDown,
+  // @ts-ignore TS7016: Could not find a declaration file for module 'lucide-react'.
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { apiRequest } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import {
@@ -297,10 +298,9 @@ export default function AdminOrderList() {
                     const isNew = !order.acknowledgedAt;
                     const isExpanded = expanded.has(order.id);
 
-                    return (
-                      <>
+                    return [
                         <TableRow
-                          key={order.id + "-main" + index}
+                          key={order.id + "-main"}
                           className="odd:bg-white even:bg-slate-50 hover:bg-gray-50"
                         >
                           <TableCell className="py-3 px-4 align-middle text-sm">
@@ -375,9 +375,9 @@ export default function AdminOrderList() {
                               </button>
                             </div>
                           </TableCell>
-                        </TableRow>
+                        </TableRow>,
 
-                        {isExpanded && (
+                        isExpanded ? (
                           <TableRow
                             key={order.id + "-detail"}
                             className="bg-gray-50"
@@ -389,9 +389,8 @@ export default function AdminOrderList() {
                               />
                             </TableCell>
                           </TableRow>
-                        )}
-                      </>
-                    );
+                        ) : null,
+                      ];
                   })
                 ) : (
                   <TableRow>
