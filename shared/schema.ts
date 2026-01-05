@@ -120,6 +120,12 @@ export const orderItems = pgTable("order_items", {
   productName: varchar("product_name").notNull(), // Store name at time of order
 });
 
+export const restaurantSettings = pgTable("restaurant_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  isOpen: boolean("is_open").default(true).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   cartItems: many(cartItems),

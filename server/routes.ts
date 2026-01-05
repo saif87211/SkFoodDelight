@@ -400,13 +400,7 @@ export async function registerRoutes(
     JWTAuth.authenticateAdminToken,
     async (req: any, res) => {
       try {
-        const dashboardData = {
-          totalUsers: await storage.getAllUsers(),
-          totalOrders: await storage.getAllorders(),
-          totalCategoriesWithPorducts:
-            await storage.getAllCategoriesWithProducts(),
-        };
-
+        const dashboardData = await storage.getAdminDashboardData();
         res.json(dashboardData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);

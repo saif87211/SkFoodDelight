@@ -22,9 +22,7 @@ import {
   InsertAdmin,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, getTableColumns } from "drizzle-orm";
-import { datetime } from "drizzle-orm/mysql-core";
-import { any } from "zod";
+import { eq, and, desc, getTableColumns, sql, gte, asc, or } from "drizzle-orm";
 
 type UserWithoutPassword = Omit<User, "password">;
 type CategoryWithProducts = Category & { products: Product[] };
@@ -533,6 +531,102 @@ export class DatabaseStorage implements IStorage {
     }
 
     return ordersWithItems.map((o) => ({ ...o, user: userMap.get(o.id) }));
+  }
+
+  async getAdminDashboardData() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const kpiPromise = db
+      .select({
+        todayRevenue: sql<number>`SUM(CASE WHEN ${orders.createdAt} >= ${today} THEN ${orders.totalAmount} ELSE 0 END)`,
+        todayCount: sql<number>`COUNT(CASE WHEN ${orders.createdAt} >= ${today} THEN 1 END)`,
+        prevRevenue: sql<number>`SUM(CASE WHEN ${orders.createdAt} >= ${yesterday} AND ${orders.createdAt} < ${today} THEN ${orders.totalAmount} ELSE 0 END)`,
+        prevCount: sql<number>`COUNT(CASE WHEN ${orders.createdAt} >= ${yesterday} AND ${orders.createdAt} < ${today} THEN 1 END)`,
+      })
+      .from(orders)
+      .where(eq(orders.status, "delivered"));
+
+    const orderBreakdownPromise = db
+      .select({
+        name: orders.status,
+        value: sql<number>`count(*)`,
+      })
+      .from(orders)
+      .where(
+        and(
+          gte(orders.createdAt, sql`now() - interval '24 hours'`),
+          or(
+            eq(orders.status, "delivered"),
+            eq(orders.status, "pending"),
+            eq(orders.status, "canceled")
+          )
+        )
+      )
+      .groupBy(orders.status);
+
+    // 1. Change the alias here from "date" to "chart_date"
+    const dateSeries = sql`
+    SELECT generate_series(
+      CURRENT_DATE - INTERVAL '6 days',
+      CURRENT_DATE,
+      INTERVAL '1 day'
+    )::date AS chart_date`;
+
+    const chartPromise = db
+      .select({
+        date: sql`all_days.chart_date`,
+        revenue: sql<number>`COALESCE(SUM(${orders.totalAmount}), 0)`,
+        count: sql<number>`COALESCE(COUNT(${orders.id}), 0)`,
+      })
+      .from(sql`(${dateSeries}) AS all_days`)
+      .leftJoin(
+        orders,
+        and(
+          sql`DATE(${orders.createdAt}) = all_days.chart_date`,
+          eq(orders.status, "delivered")
+        )
+      )
+      .groupBy(sql`all_days.chart_date`)
+      .orderBy(asc(sql`all_days.chart_date`));
+
+    const totalItemsPromise = db
+      .select({
+        name: orderItems.productName,
+        units: sql<number>`SUM(${orderItems.quantity})`,
+      })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(eq(orders.status, "delivered"))
+      .groupBy(orderItems.productName)
+      .orderBy(desc(sql`SUM(${orderItems.quantity})`))
+      .limit(5);
+
+    const [kpis, chartData, topItems, orderBreakdowncount] = await Promise.all([
+      kpiPromise,
+      chartPromise,
+      totalItemsPromise,
+      orderBreakdownPromise,
+    ]);
+
+    const defaultBreakdown = [
+      { name: "delivered", value: 0 },
+      { name: "pending", value: 0 },
+      { name: "canceled", value: 0 },
+    ];
+
+    const orderBreakdown = defaultBreakdown.map((item) => {
+      const dbMatch = orderBreakdowncount.find((res) => res.name === item.name);
+
+      return {
+        name: item.name,
+        value: dbMatch ? Number(dbMatch.value) : 0,
+      };
+    });
+
+    return { kpis, chartData, topItems, orderBreakdown };
   }
 }
 
