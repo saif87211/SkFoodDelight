@@ -33,8 +33,7 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
       routes: [
         { name: "Dashboard", path: "/admin/dashboard" },
         { name: "Live orders", path: "/admin/live-orders" },
-        { name: "Orders-List", path: "/admin/orders-list" },
-      ],
+        { name: "Orders-List", path: "/admin/orders-list" },        { name: "Seeder", path: "/admin/seeder" },      ],
     },
     {
       name: "Categories",

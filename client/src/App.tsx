@@ -24,6 +24,7 @@ import AdminProductList from "./pages/admin/admin-product-list";
 import AdminOrderList from "./pages/admin/admin-order-list";
 import Invoice from "./pages/admin/invocie";
 import AdminDashBoard from "./pages/admin/admin-dashboard";
+import AdminSeeder from "./pages/admin/admin-seeder";
 
 type RouteObject = {
   path: string;
@@ -42,6 +43,10 @@ const secureAdminRoutes: RouteObject[] = [
   {
     path: "/admin/dashboard",
     component: <AdminDashBoard />,
+  },
+  {
+    path: "/admin/seeder",
+    component: <AdminSeeder />,
   },
   {
     path: "/admin/categories",
