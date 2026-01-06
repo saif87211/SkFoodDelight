@@ -33,7 +33,8 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
       routes: [
         { name: "Dashboard", path: "/admin/dashboard" },
         { name: "Live orders", path: "/admin/live-orders" },
-        { name: "Orders-List", path: "/admin/orders-list" },        { name: "Seeder", path: "/admin/seeder" },      ],
+        { name: "Orders-List", path: "/admin/orders-list" },
+        { name: "Seeder", path: "/admin/seeder" },],
     },
     {
       name: "Categories",
@@ -65,9 +66,8 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-screen w-60 p-4 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        } md:w-64 md:sticky md:top-0`}
+        className={`fixed top-0 left-0 h-screen w-60 p-4 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          } md:w-64 md:sticky md:top-0`}
         data-testid="admin-sidebar"
       >
         <div className="flex flex-col h-full">
@@ -116,11 +116,10 @@ const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
                               >
                                 <Minus className="text-gray-400" />
                                 <Button
-                                  className={`w-full justify-start px-3 py-2 text-sm transition-all duration-300 ease-in-out hover:bg-transparent hover:text-primary hover:ml-4 ${
-                                    location === route.path
-                                      ? "font-semibold text-primary"
-                                      : "text-gray-600 hover:bg-gray-50"
-                                  }`}
+                                  className={`w-full justify-start px-3 py-2 text-sm transition-all duration-300 ease-in-out hover:bg-transparent hover:text-primary hover:ml-4 ${location === route.path
+                                    ? "font-semibold text-primary"
+                                    : "text-gray-600 hover:bg-gray-50"
+                                    }`}
                                   variant="ghost"
                                 >
                                   <span className="ml-1">{route.name}</span>

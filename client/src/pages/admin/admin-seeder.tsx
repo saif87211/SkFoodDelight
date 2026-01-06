@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminSeeder() {
     const { data, isLoading, error } = useQuery({
@@ -78,15 +75,20 @@ export default function AdminSeeder() {
 
     const selectedItems = (data as any[])
         ?.filter((p) => selected[p.id] && selected[p.id].selected)
-        .map((p) => ({ productId: p.id, quantity: selected[p.id].quantity }));
+        .map((p) => ({
+            productId: p.id,
+            quantity: selected[p.id].quantity,
+
+        }));
 
     const seedMutation = useMutation({
         mutationFn: async (payload: any) => {
-            return await apiRequest("POST", "/api/admin/seed-orders", payload);
+            return await apiRequest("POST", "/api/admin/seed-order", payload);
         },
         onSuccess: (res: any) => {
-            queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+            // queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
             alert(res?.message || "Orders seeded successfully");
+            resetForm();
         },
         onError: (e: any) => {
             alert("Failed to seed orders");
@@ -97,7 +99,12 @@ export default function AdminSeeder() {
     const handleSubmit = () => {
         const selectedItems = (data as any[])
             .filter((p) => selected[p.id] && selected[p.id].selected)
-            .map((p) => ({ productId: p.id, quantity: selected[p.id].quantity }));
+            .map((p) => ({
+                price: p.price,
+                productId: p.id,
+                quantity: selected[p.id].quantity,
+                productName: p.name,
+            }));
 
         if (selectedItems.length === 0) {
             alert("Select at least one product");
@@ -105,20 +112,26 @@ export default function AdminSeeder() {
         }
 
         const payload = {
-            date,
-            customer: {
-                name: customerName,
-                phone: customerPhone,
-                address: customerAddress,
-            },
+            createdAt: date,
+            customerName,
+            customerPhone,
+            deliveryAddress: customerAddress,
             items: selectedItems,
+            totalAmount: overallTotal(),
         };
 
         seedMutation.mutate(payload);
     };
+    const resetForm = () => {
+        setSelected({});
+        setCustomerName('');
+        setCustomerPhone('');
+        setCustomerAddress('');
+        setDate('');
+    }
 
     if (isLoading) {
-        return <div className="flex flex-row gap-2">
+        return <div className="flex justify-center items-center flex-row gap-2">
             <div className="w-4 h-4 rounded-full bg-blue-700 animate-bounce"></div>
             <div className="w-4 h-4 rounded-full bg-blue-700 animate-bounce [animation-delay:-.3s]"></div>
             <div className="w-4 h-4 rounded-full bg-blue-700 animate-bounce [animation-delay:-.5s]"></div>
@@ -192,7 +205,7 @@ export default function AdminSeeder() {
                                 <div className="text-lg font-semibold">Total: ₹{overallTotal().toFixed(2)}</div>
 
                                 <div className="flex gap-2">
-                                    <button type="button" className="px-4 py-2 bg-red-100 rounded" onClick={() => { setSelected({}); setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setDate(''); }}>Reset</button>
+                                    <button type="button" className="px-4 py-2 bg-red-100 rounded" onClick={resetForm}>Reset</button>
                                     <button type="button" className="px-4 py-2 bg-green-600 text-white rounded" onClick={handleSubmit} disabled={seedMutation.status === 'pending'}>{seedMutation.status === 'pending' ? 'Seeding...' : 'Create Orders'}</button>
                                     <button type="button" className="px-3 py-1 bg-gray-200 rounded" onClick={() => setShowPreview((s) => !s)}>{showPreview ? 'Hide Preview' : 'Preview Payload'}</button>
                                 </div>

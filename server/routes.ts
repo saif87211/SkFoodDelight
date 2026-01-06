@@ -227,11 +227,6 @@ export async function registerRoutes(
 
       const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
 
-      log(
-        `Payment details fetched: ${JSON.stringify(paymentDetails)}`,
-        "routes"
-      );
-
       const orderSchema = insertOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true })),
       });
@@ -580,8 +575,8 @@ export async function registerRoutes(
         const { category } = req.query;
         const products = category
           ? await storage.getAllProductsByCategory({
-              categoryId: category as string,
-            })
+            categoryId: category as string,
+          })
           : await storage.getAllProducts();
         res.json(products);
       } catch (error) {
@@ -678,6 +673,48 @@ export async function registerRoutes(
       }
     }
   );
+
+  app.post("/api/admin/seed-order", async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const randomUser = users[Math.floor(Math.random() * users.length)];
+      const userId = randomUser.id;
+
+      const razorpay_payment_id = `pay_${crypto.randomBytes(8).toString("hex")}`;
+
+      const orderSchema = insertOrderSchema.extend({
+        items: z.array(insertOrderItemSchema.omit({ orderId: true })),
+      });
+
+      console.log({
+        userId,
+        ...req.body,
+        paymentMethod: ["card", "netbanking", "upi"][Math.floor(Math.random() * 3)],
+        tax: "0.0",
+        paymentStatus: "paid",
+        paymentId: razorpay_payment_id,
+        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000)
+      });
+
+      const { items, ...orderData } = orderSchema.parse({
+        userId,
+        ...req.body,
+        totalAmount: req.body.totalAmount.toString(),
+        paymentMethod: ["card", "netbanking", "upi"][Math.floor(Math.random() * 3)],
+        tax: "0.0",
+        paymentStatus: "paid",
+        paymentId: razorpay_payment_id,
+        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
+      });
+
+      const order = await storage.createOrder(orderData, items);
+
+      return res.json(order);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      res.status(400).json({ message: "Failed to create order" });
+    }
+  });
 
   const httpServer = existingServer ?? createServer(app);
   return httpServer;
