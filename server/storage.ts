@@ -20,9 +20,10 @@ import {
   type Admin,
   admins,
   InsertAdmin,
+  InsertSeedOrder,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, getTableColumns, sql, gte, asc, or } from "drizzle-orm";
+import { eq, and, desc, getTableColumns, sql, gte, asc, or, inArray } from "drizzle-orm";
 
 type UserWithoutPassword = Omit<User, "password">;
 type CategoryWithProducts = Category & { products: Product[] };
@@ -261,6 +262,24 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async createSeedOrder(
+    order: InsertSeedOrder,
+    items: Omit<InsertOrderItem, "orderId">[]
+  ): Promise<Order> {
+    return await db.transaction(async (tx) => {
+      const [newOrder] = await tx.insert(orders).values(order).returning();
+
+      await tx
+        .insert(orderItems)
+        .values(items.map((item) => ({ ...item, orderId: newOrder.id })));
+
+      // Clear cart after order
+      await tx.delete(cartItems).where(eq(cartItems.userId, order.userId));
+
+      return newOrder;
+    });
+  }
+
   async getOrder(
     id: string
   ): Promise<
@@ -414,12 +433,12 @@ export class DatabaseStorage implements IStorage {
 
   async getOrderWithUser(id: string): Promise<
     | (Order & {
-        orderItems: (OrderItem & { product: Product })[];
-        user?: Pick<
-          User,
-          "id" | "firstName" | "lastName" | "email" | "profileImageUrl"
-        >;
-      })
+      orderItems: (OrderItem & { product: Product })[];
+      user?: Pick<
+        User,
+        "id" | "firstName" | "lastName" | "email" | "profileImageUrl"
+      >;
+    })
     | undefined
   > {
     const [order, items] = await Promise.all([
@@ -551,21 +570,21 @@ export class DatabaseStorage implements IStorage {
 
     const orderBreakdownPromise = db
       .select({
-        name: orders.status,
+        name: sql<string>`CASE 
+      WHEN ${orders.status} IN ('orderin', 'prepared') THEN 'pending' 
+      ELSE ${orders.status} 
+    END`.as('status_group'),
         value: sql<number>`count(*)`,
       })
       .from(orders)
       .where(
         and(
           gte(orders.createdAt, sql`now() - interval '24 hours'`),
-          or(
-            eq(orders.status, "delivered"),
-            eq(orders.status, "pending"),
-            eq(orders.status, "canceled")
-          )
+          // Simplified status filter using 'inArray'
+          inArray(orders.status, ['delivered', 'orderin', 'prepared', 'canceled'])
         )
       )
-      .groupBy(orders.status);
+      .groupBy(sql`status_group`);
 
     // 1. Change the alias here from "date" to "chart_date"
     const dateSeries = sql`

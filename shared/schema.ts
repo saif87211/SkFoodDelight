@@ -199,6 +199,11 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   updatedAt: true,
 });
 
+export const seedOrderSchema = createInsertSchema(orders).omit({
+  id: true,
+  updatedAt: true,
+});
+
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
   id: true,
 });
@@ -231,5 +236,6 @@ export type CartItem = typeof cartItems.$inferSelect;
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type InsertSeedOrder = z.infer<typeof seedOrderSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;

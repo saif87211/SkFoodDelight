@@ -10,6 +10,7 @@ import {
   insertOrderItemSchema,
   registerSchema,
   loginSchema,
+  seedOrderSchema,
 } from "@shared/schema";
 import Razorpay from "razorpay";
 import { z } from "zod";
@@ -682,23 +683,14 @@ export async function registerRoutes(
 
       const razorpay_payment_id = `pay_${crypto.randomBytes(8).toString("hex")}`;
 
-      const orderSchema = insertOrderSchema.extend({
+      const orderSchema = seedOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true })),
-      });
-
-      console.log({
-        userId,
-        ...req.body,
-        paymentMethod: ["card", "netbanking", "upi"][Math.floor(Math.random() * 3)],
-        tax: "0.0",
-        paymentStatus: "paid",
-        paymentId: razorpay_payment_id,
-        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000)
       });
 
       const { items, ...orderData } = orderSchema.parse({
         userId,
         ...req.body,
+        createdAt: new Date(req.body.createdAt),
         totalAmount: req.body.totalAmount.toString(),
         paymentMethod: ["card", "netbanking", "upi"][Math.floor(Math.random() * 3)],
         tax: "0.0",
@@ -706,8 +698,8 @@ export async function registerRoutes(
         paymentId: razorpay_payment_id,
         estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
       });
-
-      const order = await storage.createOrder(orderData, items);
+      console.log("Seed Order Data: ", { orderData});
+      const order = await storage.createSeedOrder(orderData, items);
 
       return res.json(order);
     } catch (error) {
