@@ -576,8 +576,8 @@ export async function registerRoutes(
         const { category } = req.query;
         const products = category
           ? await storage.getAllProductsByCategory({
-            categoryId: category as string,
-          })
+              categoryId: category as string,
+            })
           : await storage.getAllProducts();
         res.json(products);
       } catch (error) {
@@ -681,7 +681,9 @@ export async function registerRoutes(
       const randomUser = users[Math.floor(Math.random() * users.length)];
       const userId = randomUser.id;
 
-      const razorpay_payment_id = `pay_${crypto.randomBytes(8).toString("hex")}`;
+      const razorpay_payment_id = `pay_${crypto
+        .randomBytes(8)
+        .toString("hex")}`;
 
       const orderSchema = seedOrderSchema.extend({
         items: z.array(insertOrderItemSchema.omit({ orderId: true })),
@@ -692,13 +694,15 @@ export async function registerRoutes(
         ...req.body,
         createdAt: new Date(req.body.createdAt),
         totalAmount: req.body.totalAmount.toString(),
-        paymentMethod: ["card", "netbanking", "upi"][Math.floor(Math.random() * 3)],
+        paymentMethod: ["card", "netbanking", "upi"][
+          Math.floor(Math.random() * 3)
+        ],
         tax: "0.0",
         paymentStatus: "paid",
         paymentId: razorpay_payment_id,
         estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
       });
-      console.log("Seed Order Data: ", { orderData});
+      console.log("Seed Order Data: ", { orderData });
       const order = await storage.createSeedOrder(orderData, items);
 
       return res.json(order);
