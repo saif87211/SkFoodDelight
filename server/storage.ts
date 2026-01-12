@@ -21,9 +21,20 @@ import {
   admins,
   InsertAdmin,
   InsertSeedOrder,
+  restaurantSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, getTableColumns, sql, gte, asc, or, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  getTableColumns,
+  sql,
+  gte,
+  asc,
+  or,
+  inArray,
+} from "drizzle-orm";
 
 type UserWithoutPassword = Omit<User, "password">;
 type CategoryWithProducts = Category & { products: Product[] };
@@ -433,12 +444,12 @@ export class DatabaseStorage implements IStorage {
 
   async getOrderWithUser(id: string): Promise<
     | (Order & {
-      orderItems: (OrderItem & { product: Product })[];
-      user?: Pick<
-        User,
-        "id" | "firstName" | "lastName" | "email" | "profileImageUrl"
-      >;
-    })
+        orderItems: (OrderItem & { product: Product })[];
+        user?: Pick<
+          User,
+          "id" | "firstName" | "lastName" | "email" | "profileImageUrl"
+        >;
+      })
     | undefined
   > {
     const [order, items] = await Promise.all([
@@ -573,7 +584,7 @@ export class DatabaseStorage implements IStorage {
         name: sql<string>`CASE 
       WHEN ${orders.status} IN ('orderin', 'prepared') THEN 'pending' 
       ELSE ${orders.status} 
-    END`.as('status_group'),
+    END`.as("status_group"),
         value: sql<number>`count(*)`,
       })
       .from(orders)
@@ -581,7 +592,12 @@ export class DatabaseStorage implements IStorage {
         and(
           gte(orders.createdAt, sql`now() - interval '24 hours'`),
           // Simplified status filter using 'inArray'
-          inArray(orders.status, ['delivered', 'orderin', 'prepared', 'canceled'])
+          inArray(orders.status, [
+            "delivered",
+            "orderin",
+            "prepared",
+            "canceled",
+          ])
         )
       )
       .groupBy(sql`status_group`);
@@ -645,7 +661,26 @@ export class DatabaseStorage implements IStorage {
       };
     });
 
-    return { kpis, chartData, topItems, orderBreakdown };
+    const kitchenStatus = (await db.select().from(restaurantSettings))[0]
+      ?.isOpen;
+
+    return {
+      kpis: kpis[0],
+      chartData,
+      topItems,
+      orderBreakdown,
+      kitchenStatus,
+    };
+  }
+
+  async updateRestaurantStatus(isOpen: boolean) {
+    const restaurant = await db
+      .update(restaurantSettings)
+      .set({ isOpen })
+      .where(eq(restaurantSettings.id, "1"))
+      .returning();
+
+    return restaurant[0];
   }
 }
 

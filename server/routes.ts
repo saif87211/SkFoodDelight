@@ -397,6 +397,7 @@ export async function registerRoutes(
     async (req: any, res) => {
       try {
         const dashboardData = await storage.getAdminDashboardData();
+        console.log("Dashboard Data: ", dashboardData);
         res.json(dashboardData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -711,6 +712,27 @@ export async function registerRoutes(
       res.status(400).json({ message: "Failed to create order" });
     }
   });
+
+  app.patch(
+    "/api/admin/restaurant-status",
+    JWTAuth.authenticateAdminToken,
+    async (req, res) => {
+      try {
+        const isOpen = z.boolean().parse(req.body.isOpen);
+
+        const restaurant = await storage.updateRestaurantStatus(isOpen);
+        return res.json({
+          isOpen: restaurant.isOpen,
+          message: `Restaurant is now ${isOpen ? "live" : "closed"}`,
+        });
+      } catch (error) {
+        console.error("Error updating restaurant status:", error);
+        return res
+          .status(500)
+          .json({ message: "Failed to update restaurant status" });
+      }
+    }
+  );
 
   const httpServer = existingServer ?? createServer(app);
   return httpServer;

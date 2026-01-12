@@ -36,6 +36,8 @@ import {
   Utensils,
   RefreshCw,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 // --- TYPES ---
 interface KPI {
@@ -62,10 +64,11 @@ interface PopularItem {
 }
 
 interface DashboardData {
-  kpis: KPI[];
+  kpis: KPI;
   chartData: ChartRow[];
   orderBreakdown: Breakdown[];
   topItems: PopularItem[];
+  kitchenStatus: boolean;
 }
 
 // --- CONSTANTS ---
@@ -99,6 +102,7 @@ const formatCurrency = (val: string | number) =>
 
 export default function AdminDashBoard() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading, isError, refetch, isFetching } =
     useQuery<DashboardData>({
@@ -108,17 +112,32 @@ export default function AdminDashBoard() {
   // Example Mutation for the Restaurant Switch
   const toggleStatus = useMutation({
     mutationFn: async (isOpen: boolean) => {
-      // await fetch('/api/admin/toggle-status', { method: 'PATCH', body: JSON.stringify({ isOpen }) });
+      const response = await apiRequest("PATCH", "/api/admin/restaurant-status", {
+        isOpen,
+      });
+      return await response.json();
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["/api/admin-dashboard"] }),
+    onSuccess: (data: any) => {
+      console.log(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin-dashboard"] });
+      toast({
+        title: "Status Updated",
+        description: `Kitchen is now ${data.isOpen ? "Open" : "Closed"}.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Could not update kitchen status. Please try again.",
+      });
+    },
   });
 
   // Memoize data transformations to prevent unnecessary recalculations
   const processedData = useMemo(() => {
     if (!data) return null;
 
-    const kpi = data.kpis[0];
+    const kpi = data.kpis;
     const revenueGrowth = calculateGrowth(kpi.todayRevenue, kpi.prevRevenue);
     const ordersGrowth = calculateGrowth(kpi.todayCount, kpi.prevCount);
 
@@ -185,6 +204,7 @@ export default function AdminDashBoard() {
         <StatusToggleCard
           onToggle={(val) => toggleStatus.mutate(val)}
           isLoading={toggleStatus.isPending}
+          swtichchecked={data?.kitchenStatus || false}
         />
 
         <KPICard
@@ -408,9 +428,11 @@ function KPICard({ title, value, growth, icon, colorClass, suffix }: any) {
 function StatusToggleCard({
   onToggle,
   isLoading,
+  swtichchecked,
 }: {
   onToggle: (v: boolean) => void;
   isLoading: boolean;
+  swtichchecked: boolean;
 }) {
   return (
     <Card
@@ -425,15 +447,19 @@ function StatusToggleCard({
           </div>
           <div>
             <div className="text-sm font-bold">Kitchen Status</div>
-            <div className="text-[10px] text-emerald-600 font-bold uppercase">
-              Online
+            <div
+              className={`text-sm ${
+                swtichchecked ? "text-emerald-600" : "text-rose-600"
+              } font-bold`}
+            >
+              {swtichchecked ? "Live" : "Closed"}
             </div>
           </div>
         </div>
         <Switch
           onCheckedChange={onToggle}
           className="data-[state=unchecked]:bg-slate-400 opacity-100"
-          defaultChecked
+          checked={swtichchecked}
           disabled={isLoading}
         />
       </div>
